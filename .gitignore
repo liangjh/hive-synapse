@@ -14,12 +14,12 @@ build/
 # Local Hive workspaces and generated output
 .hive/
 /tmp-workspace/
-memory/
-org/
-personas/
-policies/
-local-overrides/
-hive.config.yaml
+/memory/
+/org/
+/personas/
+/policies/
+/local-overrides/
+/hive.config.yaml
 
 # OS/editor
 .DS_Store
