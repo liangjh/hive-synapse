@@ -21,6 +21,8 @@ REQUIRED_DIRS = [
     "memory/state/context-dirty",
     "memory/state/leases",
     "memory/proposals",
+    "memory/drift",
+    "memory/conflicts",
     "memory/operations",
     "memory/generated/context-packs",
     "memory/generated/graph",
@@ -38,6 +40,8 @@ REQUIRED_DIRS = [
 APPEND_FRIENDLY_DIRS = [
     "memory/records/agents",
     "memory/proposals",
+    "memory/drift",
+    "memory/conflicts",
     "memory/jobs/pending",
     "memory/imports",
     "memory/operations",

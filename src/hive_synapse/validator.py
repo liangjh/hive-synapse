@@ -119,6 +119,10 @@ def _detect_duplicate_yaml_ids(paths: WorkspacePaths, report: ValidationReport) 
 def _detect_sync_conflicts(paths: WorkspacePaths, report: ValidationReport) -> None:
     markers = ["conflict", "conflicted copy", "sync conflict"]
     for path in paths.root.rglob("*"):
+        if not path.is_file():
+            continue
+        if str(path.relative_to(paths.root)).startswith("memory/conflicts/"):
+            continue
         lower = path.name.lower()
         if any(marker in lower for marker in markers):
             report.add_error("workspace.sync_conflict", "Potential sync conflict file detected", str(path))

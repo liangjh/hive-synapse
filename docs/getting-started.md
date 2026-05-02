@@ -122,3 +122,17 @@ uv run hive context status departments/engineering --workspace /tmp/hive-demo
 ```
 
 Dirty markers persist for dormant agents and should be checked at sign-in or before shared writes.
+
+
+## 10. Review, Promote, and Automate
+
+```bash
+uv run hive promote sweep --workspace /tmp/hive-demo --create-proposals --json
+uv run hive promote review <proposal-id> --workspace /tmp/hive-demo --decision approved --actor steward:engineering --rationale "source-backed reusable practice"
+uv run hive promote apply <proposal-id> --workspace /tmp/hive-demo --actor steward:engineering
+uv run hive job enqueue context_rebuild departments/engineering --workspace /tmp/hive-demo --reason "refresh after promotion"
+uv run hive job run --workspace /tmp/hive-demo
+uv run hive job watchdog --workspace /tmp/hive-demo --enqueue
+```
+
+Promotion is conservative by default. Sweeps can create proposals, but publishing requires an approved proposal and an authorized actor.

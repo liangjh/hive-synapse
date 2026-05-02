@@ -12,6 +12,9 @@ from .context import compile_context_pack, context_impact, invalidate_context
 from .errors import HiveError
 from .guardrails import dirty_markers_for_target
 from .imports import add_import, classify_import, compact_import, fetch_import, propose_import
+from .jobs import claim_job, complete_job, enqueue_job, fail_job, list_jobs, run_next_job
+from .promotion import apply_proposal, list_proposals, reject_proposal, review_proposal, sweep_promotability
+from .watchdog import watchdog_report
 from .paths import WorkspacePaths
 from .workspace import create_workspace
 from .validator import validate_workspace
@@ -154,6 +157,137 @@ def _cmd_import_propose(args: argparse.Namespace) -> int:
         print(f"Created {len(result['proposals'])} proposal(s) for {result['import_id']}")
     return 0
 
+
+def _cmd_promote_list(args: argparse.Namespace) -> int:
+    result = list_proposals(Path(args.workspace), status=args.status)
+    if args.json:
+        _print_json(result)
+    else:
+        for proposal in result["proposals"]:
+            print(f"{proposal['id']} {proposal.get('status')} {proposal.get('source_record')}")
+    return 0
+
+
+def _cmd_promote_review(args: argparse.Namespace) -> int:
+    result = review_proposal(
+        Path(args.workspace),
+        args.proposal_id,
+        decision=args.decision,
+        actor=args.actor,
+        rationale=args.rationale,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Reviewed proposal {args.proposal_id}: {args.decision}")
+    return 0
+
+
+def _cmd_promote_apply(args: argparse.Namespace) -> int:
+    result = apply_proposal(Path(args.workspace), args.proposal_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Applied proposal {args.proposal_id}")
+        print(f"Published: {result['published_path']}")
+    return 0
+
+
+def _cmd_promote_reject(args: argparse.Namespace) -> int:
+    result = reject_proposal(Path(args.workspace), args.proposal_id, actor=args.actor, rationale=args.rationale)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Rejected proposal {args.proposal_id}")
+    return 0
+
+
+def _cmd_promote_sweep(args: argparse.Namespace) -> int:
+    result = sweep_promotability(
+        Path(args.workspace),
+        create_proposals=args.create_proposals,
+        actor=args.actor,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Promotable: {len(result['promotable'])}")
+        print(f"Needs more evidence: {len(result['needs_more_evidence'])}")
+        print(f"Conflicts detected: {len(result['conflicts_detected'])}")
+        print(f"Created proposals: {len(result['created_proposals'])}")
+    return 0
+
+
+def _cmd_job_enqueue(args: argparse.Namespace) -> int:
+    result = enqueue_job(Path(args.workspace), args.type, args.target, reason=args.reason, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Enqueued job: {result['job']['id']}")
+    return 0
+
+
+def _cmd_job_list(args: argparse.Namespace) -> int:
+    result = list_jobs(Path(args.workspace), status=args.status)
+    if args.json:
+        _print_json(result)
+    else:
+        for job in result["jobs"]:
+            print(f"{job['id']} {job.get('queue')} {job.get('type')} {job.get('target')}")
+    return 0
+
+
+def _cmd_job_claim(args: argparse.Namespace) -> int:
+    result = claim_job(Path(args.workspace), runner=args.runner)
+    if args.json:
+        _print_json(result)
+    else:
+        if result.get("job"):
+            print(f"Claimed job: {result['job']['id']}")
+        else:
+            print("No jobs")
+    return 0
+
+
+def _cmd_job_complete(args: argparse.Namespace) -> int:
+    result = complete_job(Path(args.workspace), args.job_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Completed job: {args.job_id}")
+    return 0
+
+
+def _cmd_job_fail(args: argparse.Namespace) -> int:
+    result = fail_job(Path(args.workspace), args.job_id, reason=args.reason, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Failed job: {args.job_id}")
+    return 0
+
+
+def _cmd_job_run(args: argparse.Namespace) -> int:
+    result = run_next_job(Path(args.workspace), runner=args.runner)
+    if args.json:
+        _print_json(result)
+    else:
+        if result.get("job"):
+            print(f"Ran job: {result['job']['id']}")
+        else:
+            print("No jobs")
+    return 0
+
+
+def _cmd_job_watchdog(args: argparse.Namespace) -> int:
+    result = watchdog_report(Path(args.workspace), enqueue=args.enqueue, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Watchdog findings: {result['finding_count']}")
+        print(result["markdown_path"])
+    return 0
+
 def _cmd_backup_create(args: argparse.Namespace) -> int:
     backup_dir, manifest_path, operation = create_backup(Path(args.path), actor=args.actor)
     result = {
@@ -277,6 +411,96 @@ def build_parser() -> argparse.ArgumentParser:
     import_propose.add_argument("--json", action="store_true")
     import_propose.set_defaults(func=_cmd_import_propose)
 
+    promote_parser = subparsers.add_parser("promote", help="Promotion and review operations")
+    promote_subparsers = promote_parser.add_subparsers(dest="promote_command", required=True)
+    promote_list = promote_subparsers.add_parser("list", help="List promotion proposals")
+    promote_list.add_argument("--workspace", default=".")
+    promote_list.add_argument("--status")
+    promote_list.add_argument("--json", action="store_true")
+    promote_list.set_defaults(func=_cmd_promote_list)
+
+    promote_review = promote_subparsers.add_parser("review", help="Approve or reject a proposal")
+    promote_review.add_argument("proposal_id")
+    promote_review.add_argument("--workspace", default=".")
+    promote_review.add_argument("--decision", choices=["approved", "rejected"], required=True)
+    promote_review.add_argument("--actor", required=True)
+    promote_review.add_argument("--rationale", required=True)
+    promote_review.add_argument("--json", action="store_true")
+    promote_review.set_defaults(func=_cmd_promote_review)
+
+    promote_apply = promote_subparsers.add_parser("apply", help="Apply an approved proposal")
+    promote_apply.add_argument("proposal_id")
+    promote_apply.add_argument("--workspace", default=".")
+    promote_apply.add_argument("--actor", required=True)
+    promote_apply.add_argument("--json", action="store_true")
+    promote_apply.set_defaults(func=_cmd_promote_apply)
+
+    promote_reject = promote_subparsers.add_parser("reject", help="Reject a proposal")
+    promote_reject.add_argument("proposal_id")
+    promote_reject.add_argument("--workspace", default=".")
+    promote_reject.add_argument("--actor", required=True)
+    promote_reject.add_argument("--rationale", required=True)
+    promote_reject.add_argument("--json", action="store_true")
+    promote_reject.set_defaults(func=_cmd_promote_reject)
+
+    promote_sweep = promote_subparsers.add_parser("sweep", help="Sweep candidates for promotability")
+    promote_sweep.add_argument("--workspace", default=".")
+    promote_sweep.add_argument("--create-proposals", action="store_true")
+    promote_sweep.add_argument("--actor", default="system:sweep")
+    promote_sweep.add_argument("--json", action="store_true")
+    promote_sweep.set_defaults(func=_cmd_promote_sweep)
+
+    job_parser = subparsers.add_parser("job", help="Filesystem job queue operations")
+    job_subparsers = job_parser.add_subparsers(dest="job_command", required=True)
+    job_enqueue = job_subparsers.add_parser("enqueue", help="Enqueue a filesystem job")
+    job_enqueue.add_argument("type")
+    job_enqueue.add_argument("target")
+    job_enqueue.add_argument("--workspace", default=".")
+    job_enqueue.add_argument("--reason", required=True)
+    job_enqueue.add_argument("--actor", default="system:job")
+    job_enqueue.add_argument("--json", action="store_true")
+    job_enqueue.set_defaults(func=_cmd_job_enqueue)
+
+    job_list = job_subparsers.add_parser("list", help="List jobs")
+    job_list.add_argument("--workspace", default=".")
+    job_list.add_argument("--status", choices=["pending", "claimed", "completed", "failed"])
+    job_list.add_argument("--json", action="store_true")
+    job_list.set_defaults(func=_cmd_job_list)
+
+    job_claim = job_subparsers.add_parser("claim", help="Claim the next pending job")
+    job_claim.add_argument("--workspace", default=".")
+    job_claim.add_argument("--runner", default="runner:local")
+    job_claim.add_argument("--json", action="store_true")
+    job_claim.set_defaults(func=_cmd_job_claim)
+
+    job_complete = job_subparsers.add_parser("complete", help="Complete a claimed job")
+    job_complete.add_argument("job_id")
+    job_complete.add_argument("--workspace", default=".")
+    job_complete.add_argument("--actor", default="system:job")
+    job_complete.add_argument("--json", action="store_true")
+    job_complete.set_defaults(func=_cmd_job_complete)
+
+    job_fail = job_subparsers.add_parser("fail", help="Fail a claimed job")
+    job_fail.add_argument("job_id")
+    job_fail.add_argument("--workspace", default=".")
+    job_fail.add_argument("--reason", required=True)
+    job_fail.add_argument("--actor", default="system:job")
+    job_fail.add_argument("--json", action="store_true")
+    job_fail.set_defaults(func=_cmd_job_fail)
+
+    job_run = job_subparsers.add_parser("run", help="Run the next pending job")
+    job_run.add_argument("--workspace", default=".")
+    job_run.add_argument("--runner", default="runner:local")
+    job_run.add_argument("--json", action="store_true")
+    job_run.set_defaults(func=_cmd_job_run)
+
+    job_watchdog = job_subparsers.add_parser("watchdog", help="Run watchdog checks")
+    job_watchdog.add_argument("--workspace", default=".")
+    job_watchdog.add_argument("--enqueue", action="store_true")
+    job_watchdog.add_argument("--actor", default="system:watchdog")
+    job_watchdog.add_argument("--json", action="store_true")
+    job_watchdog.set_defaults(func=_cmd_job_watchdog)
+
     backup_parser = subparsers.add_parser("backup", help="Backup operations")
     backup_subparsers = backup_parser.add_subparsers(dest="backup_command", required=True)
     backup_create = backup_subparsers.add_parser("create", help="Create a workspace backup")
@@ -294,8 +518,6 @@ def build_parser() -> argparse.ArgumentParser:
     rollback_preview_parser.set_defaults(func=_cmd_rollback_preview)
 
     for name in [
-        "promote",
-        "job",
         "node",
         "actor",
         "skill",
