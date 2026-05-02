@@ -20,6 +20,8 @@ uv run hive init /tmp/hive-demo --fixture basic-org
 uv run hive validate /tmp/hive-demo
 uv run hive context compile departments/engineering --workspace /tmp/hive-demo
 uv run hive backup create /tmp/hive-demo
+printf "# Launch Notes\n\nCurrent project practice." > /tmp/launch-notes.md
+uv run hive import add departments/engineering /tmp/launch-notes.md --workspace /tmp/hive-demo
 ```
 
 See [`docs/getting-started.md`](docs/getting-started.md) for the detailed guide.

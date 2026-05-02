@@ -4,7 +4,7 @@ from pathlib import Path
 
 from . import simple_yaml as yaml
 
-from .frontmatter import dump_markdown, write_markdown
+from .frontmatter import dump_markdown
 from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
 from .models import WorkspaceConfig
@@ -26,6 +26,13 @@ def create_workspace(root: Path, *, fixture: str | None = None, force: bool = Fa
         atomic_write_text(
             paths.config,
             yaml.safe_dump({"hive_workspace": config.model_dump(mode="json")}, sort_keys=False),
+        )
+
+    budget_path = paths.root / "policies" / "context-budget.yaml"
+    if not budget_path.exists() or force:
+        atomic_write_text(
+            budget_path,
+            yaml.safe_dump({"id": "context_budget_default", "budget_tokens": 24000, "warn_at_ratio": 0.8, "on_over_budget": "create_compaction_job"}, sort_keys=False),
         )
 
     if fixture:
@@ -163,7 +170,7 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "source_refs": [{"source_id": "raw:demo-source", "locator": "memory/raw/demo-source.md"}],
         "tags": ["demo", "practice"],
     }
-    write_markdown(
+    _write_if_allowed(
         paths.root
         / "memory"
         / "records"
@@ -172,23 +179,27 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         / "engineering"
         / "candidates"
         / "mem_demo_engineering_practice_001.md",
-        record,
-        "Engineering memory records should include source references before promotion.",
+        dump_markdown(
+            record,
+            "Engineering memory records should include source references before promotion.",
+        ),
+        force=force,
     )
 
     import_root = paths.root / "memory" / "imports" / "departments" / "engineering"
-    for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected"]:
+    for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected", "items", "reports"]:
         (import_root / child).mkdir(parents=True, exist_ok=True)
     import_workspace = {
         "id": "import_workspace_departments_engineering",
         "target": "departments/engineering",
         "status": "active",
         "owner": "steward:engineering",
-        "paths": {child: f"memory/imports/departments/engineering/{child}/" for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected"]},
+        "paths": {child: f"memory/imports/departments/engineering/{child}/" for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected", "items", "reports"]},
     }
-    atomic_write_text(
+    _write_if_allowed(
         import_root / "workspace.yaml",
         yaml.safe_dump(import_workspace, sort_keys=False),
+        force=force,
     )
     import_item = {
         "id": "import_departments_engineering_demo_001",
@@ -201,8 +212,12 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "raw_preserved": True,
         "sensitivity": "internal",
     }
-    atomic_write_text(import_root / "inbox" / "demo-source.md", "# Imported Engineering Notes\n")
-    atomic_write_text(import_root / "import-item-demo.yaml", yaml.safe_dump(import_item, sort_keys=False))
+    _write_if_allowed(
+        import_root / "inbox" / "demo-source.md",
+        "# Imported Engineering Notes\n",
+        force=force,
+    )
+    _write_if_allowed(import_root / "import-item-demo.yaml", yaml.safe_dump(import_item, sort_keys=False), force=force)
 
     assignment = {
         "id": "assignment_codex_engineering_001",
@@ -214,9 +229,10 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "assigned_at": now,
         "personal_memory_home": "memory/records/agents/codex-engineering-001/",
     }
-    atomic_write_text(
+    _write_if_allowed(
         paths.root / "org" / "assignments" / "assignment_codex_engineering_001.yaml",
         yaml.safe_dump(assignment, sort_keys=False),
+        force=force,
     )
     signin = {
         "id": "signin_demo_001",
@@ -230,7 +246,7 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "context_pack": "memory/generated/context-packs/nodes/departments/engineering/PACK.md",
         "loaded_context_packs": [],
     }
-    atomic_write_text(paths.root / "org" / "signins" / "signin_demo_001.yaml", yaml.safe_dump(signin, sort_keys=False))
+    _write_if_allowed(paths.root / "org" / "signins" / "signin_demo_001.yaml", yaml.safe_dump(signin, sort_keys=False), force=force)
 
     proposal = {
         "id": "promotion_demo_001",
@@ -241,7 +257,7 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "rationale": "Demo source-linked reusable practice.",
         "status": "candidate",
     }
-    atomic_write_text(paths.root / "memory" / "proposals" / "promotion_demo_001.yaml", yaml.safe_dump(proposal, sort_keys=False))
+    _write_if_allowed(paths.root / "memory" / "proposals" / "promotion_demo_001.yaml", yaml.safe_dump(proposal, sort_keys=False), force=force)
 
     job = {
         "id": "job_demo_node_compact_001",
@@ -252,7 +268,7 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "created_at": now,
         "inputs": {"since": "beginning"},
     }
-    atomic_write_text(paths.root / "memory" / "jobs" / "pending" / "job_demo_node_compact_001.yaml", yaml.safe_dump(job, sort_keys=False))
+    _write_if_allowed(paths.root / "memory" / "jobs" / "pending" / "job_demo_node_compact_001.yaml", yaml.safe_dump(job, sort_keys=False), force=force)
 
     invalidation = {
         "id": "ctxinv_demo_001",
@@ -264,7 +280,7 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "affected_targets": ["departments/engineering", "agents/codex-engineering-001"],
         "status": "open",
     }
-    atomic_write_text(paths.root / "memory" / "state" / "context-dirty" / "ctxinv_demo_001.yaml", yaml.safe_dump(invalidation, sort_keys=False))
+    _write_if_allowed(paths.root / "memory" / "state" / "context-dirty" / "ctxinv_demo_001.yaml", yaml.safe_dump(invalidation, sort_keys=False), force=force)
 
     archive = {
         "id": "archive_demo_001",
@@ -276,4 +292,4 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "status": "archived",
         "excluded_from_startup_context": True,
     }
-    atomic_write_text(paths.root / "memory" / "audit" / "archive_demo_001.yaml", yaml.safe_dump(archive, sort_keys=False))
+    _write_if_allowed(paths.root / "memory" / "audit" / "archive_demo_001.yaml", yaml.safe_dump(archive, sort_keys=False), force=force)

@@ -25,6 +25,7 @@ class OperationLog:
         mode: str = "apply",
         status: str = "completed",
         changed_files: list[dict[str, Any]] | None = None,
+        changed_records: list[dict[str, Any]] | None = None,
         rollback: dict[str, Any] | None = None,
     ) -> OperationRecord:
         record = OperationRecord(
@@ -37,6 +38,7 @@ class OperationLog:
             command=command,
             mode=mode,
             changed_files=changed_files or [],
+            changed_records=changed_records or [],
             rollback=rollback or {"supported": False, "strategy": "unsupported"},
         )
         path = self.paths.operations / f"{record.id}.yaml"

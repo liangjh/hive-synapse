@@ -8,9 +8,10 @@ from typing import Any
 
 from . import __version__
 from .backup import create_backup, rollback_preview
-from .context import compile_context_pack
+from .context import compile_context_pack, context_impact, invalidate_context
 from .errors import HiveError
 from .guardrails import dirty_markers_for_target
+from .imports import add_import, classify_import, compact_import, fetch_import, propose_import
 from .paths import WorkspacePaths
 from .workspace import create_workspace
 from .validator import validate_workspace
@@ -83,6 +84,76 @@ def _cmd_context_status(args: argparse.Namespace) -> int:
     return 1 if markers else 0
 
 
+
+def _cmd_context_impacted(args: argparse.Namespace) -> int:
+    result = context_impact(Path(args.workspace), args.target)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Impact for {args.target}")
+        for key in ["descendants", "connected_edges", "assigned_actors", "affected_targets"]:
+            print(f"{key}:")
+            for item in result.get(key, []):
+                print(f"- {item}")
+    return 0
+
+
+def _cmd_context_invalidate(args: argparse.Namespace) -> int:
+    result = invalidate_context(Path(args.workspace), args.target, reason=args.reason, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Invalidated context for {args.target}: {result['invalidation']['id']}")
+    return 0
+
+
+def _cmd_import_add(args: argparse.Namespace) -> int:
+    result = add_import(Path(args.workspace), args.target, args.source, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Created import item: {result['import_id']}")
+    return 0
+
+
+def _cmd_import_fetch(args: argparse.Namespace) -> int:
+    result = fetch_import(Path(args.workspace), args.target, args.url, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Created URL import item: {result['import_id']}")
+    return 0
+
+
+def _cmd_import_classify(args: argparse.Namespace) -> int:
+    result = classify_import(Path(args.workspace), args.import_id, sensitivity=args.sensitivity, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Classified import item: {result['import_id']}")
+    return 0
+
+
+def _cmd_import_compact(args: argparse.Namespace) -> int:
+    result = compact_import(Path(args.workspace), args.import_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        if result.get("candidate_id"):
+            print(f"Created candidate: {result['candidate_id']}")
+        else:
+            print(f"Import compact result: {result.get('status')}")
+    return 0
+
+
+def _cmd_import_propose(args: argparse.Namespace) -> int:
+    result = propose_import(Path(args.workspace), args.import_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Created {len(result['proposals'])} proposal(s) for {result['import_id']}")
+    return 0
+
 def _cmd_backup_create(args: argparse.Namespace) -> int:
     backup_dir, manifest_path, operation = create_backup(Path(args.path), actor=args.actor)
     result = {
@@ -152,6 +223,60 @@ def build_parser() -> argparse.ArgumentParser:
     status_parser.add_argument("--json", action="store_true")
     status_parser.set_defaults(func=_cmd_context_status)
 
+    impacted_parser = context_subparsers.add_parser("impacted", help="Compute impacted targets")
+    impacted_parser.add_argument("target")
+    impacted_parser.add_argument("--workspace", default=".")
+    impacted_parser.add_argument("--json", action="store_true")
+    impacted_parser.set_defaults(func=_cmd_context_impacted)
+
+    invalidate_parser = context_subparsers.add_parser("invalidate", help="Write context dirty markers")
+    invalidate_parser.add_argument("target")
+    invalidate_parser.add_argument("--workspace", default=".")
+    invalidate_parser.add_argument("--reason", required=True)
+    invalidate_parser.add_argument("--actor", default="system:context")
+    invalidate_parser.add_argument("--json", action="store_true")
+    invalidate_parser.set_defaults(func=_cmd_context_invalidate)
+
+    import_parser = subparsers.add_parser("import", help="Import workspace operations")
+    import_subparsers = import_parser.add_subparsers(dest="import_command", required=True)
+    import_add = import_subparsers.add_parser("add", help="Add a local file or text import")
+    import_add.add_argument("target")
+    import_add.add_argument("source")
+    import_add.add_argument("--workspace", default=".")
+    import_add.add_argument("--actor", default="system:import")
+    import_add.add_argument("--json", action="store_true")
+    import_add.set_defaults(func=_cmd_import_add)
+
+    import_fetch = import_subparsers.add_parser("fetch", help="Record a URL import")
+    import_fetch.add_argument("target")
+    import_fetch.add_argument("url")
+    import_fetch.add_argument("--workspace", default=".")
+    import_fetch.add_argument("--actor", default="system:import")
+    import_fetch.add_argument("--json", action="store_true")
+    import_fetch.set_defaults(func=_cmd_import_fetch)
+
+    import_classify = import_subparsers.add_parser("classify", help="Classify an import item")
+    import_classify.add_argument("import_id")
+    import_classify.add_argument("--workspace", default=".")
+    import_classify.add_argument("--sensitivity")
+    import_classify.add_argument("--actor", default="system:import")
+    import_classify.add_argument("--json", action="store_true")
+    import_classify.set_defaults(func=_cmd_import_classify)
+
+    import_compact = import_subparsers.add_parser("compact", help="Compact an import into candidate memory")
+    import_compact.add_argument("import_id")
+    import_compact.add_argument("--workspace", default=".")
+    import_compact.add_argument("--actor", default="system:import")
+    import_compact.add_argument("--json", action="store_true")
+    import_compact.set_defaults(func=_cmd_import_compact)
+
+    import_propose = import_subparsers.add_parser("propose", help="Create promotion proposals for an import")
+    import_propose.add_argument("import_id")
+    import_propose.add_argument("--workspace", default=".")
+    import_propose.add_argument("--actor", default="system:import")
+    import_propose.add_argument("--json", action="store_true")
+    import_propose.set_defaults(func=_cmd_import_propose)
+
     backup_parser = subparsers.add_parser("backup", help="Backup operations")
     backup_subparsers = backup_parser.add_subparsers(dest="backup_command", required=True)
     backup_create = backup_subparsers.add_parser("create", help="Create a workspace backup")
@@ -169,7 +294,6 @@ def build_parser() -> argparse.ArgumentParser:
     rollback_preview_parser.set_defaults(func=_cmd_rollback_preview)
 
     for name in [
-        "import",
         "promote",
         "job",
         "node",
