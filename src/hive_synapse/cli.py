@@ -12,8 +12,12 @@ from .context import compile_context_pack, context_impact, invalidate_context
 from .errors import HiveError
 from .guardrails import dirty_markers_for_target
 from .imports import add_import, classify_import, compact_import, fetch_import, propose_import
+from .archive import archive_sweep
 from .jobs import claim_job, complete_job, enqueue_job, fail_job, list_jobs, run_next_job
+from .lifecycle import archive_actor, archive_node, assign_actor, create_node, move_node, restore_node
 from .promotion import apply_proposal, list_proposals, reject_proposal, review_proposal, sweep_promotability
+from .skills import list_skills, register_skill, update_skill_status
+from .upgrade import doctor, list_migrations, migration_apply, migration_dry_run, template_apply_new, template_diff
 from .watchdog import watchdog_report
 from .paths import WorkspacePaths
 from .workspace import create_workspace
@@ -288,6 +292,154 @@ def _cmd_job_watchdog(args: argparse.Namespace) -> int:
         print(result["markdown_path"])
     return 0
 
+
+def _cmd_node_create(args: argparse.Namespace) -> int:
+    result = create_node(Path(args.workspace), args.node_id, kind=args.kind, title=args.title, parents=args.parent, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Created node: {args.node_id}")
+    return 0
+
+
+def _cmd_node_move(args: argparse.Namespace) -> int:
+    result = move_node(Path(args.workspace), args.node_id, parents=args.parent, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Moved node: {args.node_id}")
+    return 0
+
+
+def _cmd_node_archive(args: argparse.Namespace) -> int:
+    result = archive_node(Path(args.workspace), args.node_id, actor=args.actor, reason=args.reason, defer_compaction=args.defer_compaction)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Archived node: {args.node_id}")
+    return 0
+
+
+def _cmd_node_restore(args: argparse.Namespace) -> int:
+    result = restore_node(Path(args.workspace), args.node_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Restored node: {args.node_id}")
+    return 0
+
+
+def _cmd_actor_assign(args: argparse.Namespace) -> int:
+    result = assign_actor(Path(args.workspace), args.actor_id, home_node=args.home_node, role=args.role, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Assigned actor: {args.actor_id}")
+    return 0
+
+
+def _cmd_actor_archive(args: argparse.Namespace) -> int:
+    result = archive_actor(Path(args.workspace), args.actor_id, actor=args.actor, reason=args.reason)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Archived actor: {args.actor_id}")
+    return 0
+
+
+def _cmd_skill_register(args: argparse.Namespace) -> int:
+    result = register_skill(Path(args.workspace), args.skill_id, title=args.title, scope=args.scope, trigger=args.trigger, permission_profile=args.permission_profile, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Registered skill: {args.skill_id}")
+    return 0
+
+
+def _cmd_skill_list(args: argparse.Namespace) -> int:
+    result = list_skills(Path(args.workspace), scope=args.scope, include_archived=args.include_archived)
+    if args.json:
+        _print_json(result)
+    else:
+        for skill in result["skills"]:
+            print(f"{skill['id']} {skill.get('status')} {skill.get('scope')}")
+    return 0
+
+
+def _cmd_skill_status(args: argparse.Namespace) -> int:
+    result = update_skill_status(Path(args.workspace), args.skill_id, status=args.status, actor=args.actor, reason=args.reason)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Updated skill {args.skill_id}: {args.status}")
+    return 0
+
+
+def _cmd_archive_sweep(args: argparse.Namespace) -> int:
+    result = archive_sweep(Path(args.workspace), enqueue=args.enqueue, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Archive candidates: {len(result['candidates'])}")
+    return 0
+
+
+def _cmd_upgrade_doctor(args: argparse.Namespace) -> int:
+    result = doctor(Path(args.workspace), require_generated=args.require_generated)
+    if args.json:
+        _print_json(result)
+    else:
+        print("Doctor passed" if result["ok"] else "Doctor found issues")
+    return 0 if result["ok"] else 1
+
+
+def _cmd_upgrade_migration_list(args: argparse.Namespace) -> int:
+    result = list_migrations(Path(args.workspace))
+    if args.json:
+        _print_json(result)
+    else:
+        for migration in result["migrations"]:
+            marker = "applied" if migration["applied"] else "pending"
+            print(f"{migration['id']} {marker} - {migration['description']}")
+    return 0
+
+
+def _cmd_upgrade_migration_dry_run(args: argparse.Namespace) -> int:
+    result = migration_dry_run(Path(args.workspace), args.migration_id)
+    if args.json:
+        _print_json(result)
+    else:
+        for change in result["changes"]:
+            print(f"{change['action']} {change['path']}")
+    return 0
+
+
+def _cmd_upgrade_migration_apply(args: argparse.Namespace) -> int:
+    result = migration_apply(Path(args.workspace), args.migration_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Applied migration: {args.migration_id}")
+    return 0
+
+
+def _cmd_upgrade_template_diff(args: argparse.Namespace) -> int:
+    result = template_diff(Path(args.workspace), Path(__file__).resolve().parents[2])
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Template diffs: {len(result['diffs'])}")
+    return 0
+
+
+def _cmd_upgrade_template_apply_new(args: argparse.Namespace) -> int:
+    result = template_apply_new(Path(args.workspace), Path(__file__).resolve().parents[2], actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Applied new template files: {len(result['changed_files'])}")
+    return 0
+
 def _cmd_backup_create(args: argparse.Namespace) -> int:
     backup_dir, manifest_path, operation = create_backup(Path(args.path), actor=args.actor)
     result = {
@@ -501,6 +653,136 @@ def build_parser() -> argparse.ArgumentParser:
     job_watchdog.add_argument("--json", action="store_true")
     job_watchdog.set_defaults(func=_cmd_job_watchdog)
 
+    node_parser = subparsers.add_parser("node", help="Node lifecycle operations")
+    node_subparsers = node_parser.add_subparsers(dest="node_command", required=True)
+    node_create = node_subparsers.add_parser("create", help="Create a graph node")
+    node_create.add_argument("node_id")
+    node_create.add_argument("--workspace", default=".")
+    node_create.add_argument("--kind", required=True)
+    node_create.add_argument("--title", required=True)
+    node_create.add_argument("--parent", action="append", default=[])
+    node_create.add_argument("--actor", required=True)
+    node_create.add_argument("--json", action="store_true")
+    node_create.set_defaults(func=_cmd_node_create)
+
+    node_move = node_subparsers.add_parser("move", help="Move a graph node")
+    node_move.add_argument("node_id")
+    node_move.add_argument("--workspace", default=".")
+    node_move.add_argument("--parent", action="append", default=[])
+    node_move.add_argument("--actor", required=True)
+    node_move.add_argument("--json", action="store_true")
+    node_move.set_defaults(func=_cmd_node_move)
+
+    node_archive = node_subparsers.add_parser("archive", help="Archive a graph node")
+    node_archive.add_argument("node_id")
+    node_archive.add_argument("--workspace", default=".")
+    node_archive.add_argument("--actor", required=True)
+    node_archive.add_argument("--reason", required=True)
+    node_archive.add_argument("--defer-compaction", action="store_true")
+    node_archive.add_argument("--json", action="store_true")
+    node_archive.set_defaults(func=_cmd_node_archive)
+
+    node_restore = node_subparsers.add_parser("restore", help="Restore an archived graph node")
+    node_restore.add_argument("node_id")
+    node_restore.add_argument("--workspace", default=".")
+    node_restore.add_argument("--actor", required=True)
+    node_restore.add_argument("--json", action="store_true")
+    node_restore.set_defaults(func=_cmd_node_restore)
+
+    actor_parser = subparsers.add_parser("actor", help="Actor assignment operations")
+    actor_subparsers = actor_parser.add_subparsers(dest="actor_command", required=True)
+    actor_assign_cmd = actor_subparsers.add_parser("assign", help="Assign an actor to a node")
+    actor_assign_cmd.add_argument("actor_id")
+    actor_assign_cmd.add_argument("--workspace", default=".")
+    actor_assign_cmd.add_argument("--home-node", required=True)
+    actor_assign_cmd.add_argument("--role", required=True)
+    actor_assign_cmd.add_argument("--actor", required=True)
+    actor_assign_cmd.add_argument("--json", action="store_true")
+    actor_assign_cmd.set_defaults(func=_cmd_actor_assign)
+
+    actor_archive_cmd = actor_subparsers.add_parser("archive", help="Archive an actor")
+    actor_archive_cmd.add_argument("actor_id")
+    actor_archive_cmd.add_argument("--workspace", default=".")
+    actor_archive_cmd.add_argument("--actor", required=True)
+    actor_archive_cmd.add_argument("--reason", required=True)
+    actor_archive_cmd.add_argument("--json", action="store_true")
+    actor_archive_cmd.set_defaults(func=_cmd_actor_archive)
+
+    skill_parser = subparsers.add_parser("skill", help="Shared skill registry operations")
+    skill_subparsers = skill_parser.add_subparsers(dest="skill_command", required=True)
+    skill_register_cmd = skill_subparsers.add_parser("register", help="Register a shared skill")
+    skill_register_cmd.add_argument("skill_id")
+    skill_register_cmd.add_argument("--workspace", default=".")
+    skill_register_cmd.add_argument("--title", required=True)
+    skill_register_cmd.add_argument("--scope", required=True)
+    skill_register_cmd.add_argument("--trigger", required=True)
+    skill_register_cmd.add_argument("--permission-profile", default="read_only")
+    skill_register_cmd.add_argument("--actor", required=True)
+    skill_register_cmd.add_argument("--json", action="store_true")
+    skill_register_cmd.set_defaults(func=_cmd_skill_register)
+
+    skill_list_cmd = skill_subparsers.add_parser("list", help="List shared skills")
+    skill_list_cmd.add_argument("--workspace", default=".")
+    skill_list_cmd.add_argument("--scope")
+    skill_list_cmd.add_argument("--include-archived", action="store_true")
+    skill_list_cmd.add_argument("--json", action="store_true")
+    skill_list_cmd.set_defaults(func=_cmd_skill_list)
+
+    skill_status_cmd = skill_subparsers.add_parser("status", help="Update skill status")
+    skill_status_cmd.add_argument("skill_id")
+    skill_status_cmd.add_argument("status", choices=["active", "deprecated", "archived", "restored"])
+    skill_status_cmd.add_argument("--workspace", default=".")
+    skill_status_cmd.add_argument("--actor", required=True)
+    skill_status_cmd.add_argument("--reason", required=True)
+    skill_status_cmd.add_argument("--json", action="store_true")
+    skill_status_cmd.set_defaults(func=_cmd_skill_status)
+
+    archive_parser = subparsers.add_parser("archive", help="Archive operations")
+    archive_subparsers = archive_parser.add_subparsers(dest="archive_command", required=True)
+    archive_sweep_cmd = archive_subparsers.add_parser("sweep", help="Find archive candidates")
+    archive_sweep_cmd.add_argument("--workspace", default=".")
+    archive_sweep_cmd.add_argument("--enqueue", action="store_true")
+    archive_sweep_cmd.add_argument("--actor", default="system:archive")
+    archive_sweep_cmd.add_argument("--json", action="store_true")
+    archive_sweep_cmd.set_defaults(func=_cmd_archive_sweep)
+
+    upgrade_parser = subparsers.add_parser("upgrade", help="Doctor, migration, and template operations")
+    upgrade_subparsers = upgrade_parser.add_subparsers(dest="upgrade_command", required=True)
+    upgrade_doctor = upgrade_subparsers.add_parser("doctor", help="Check workspace health")
+    upgrade_doctor.add_argument("--workspace", default=".")
+    upgrade_doctor.add_argument("--require-generated", action="store_true")
+    upgrade_doctor.add_argument("--json", action="store_true")
+    upgrade_doctor.set_defaults(func=_cmd_upgrade_doctor)
+
+    upgrade_migration_list = upgrade_subparsers.add_parser("migration-list", help="List migrations")
+    upgrade_migration_list.add_argument("--workspace", default=".")
+    upgrade_migration_list.add_argument("--json", action="store_true")
+    upgrade_migration_list.set_defaults(func=_cmd_upgrade_migration_list)
+
+    upgrade_migration_dry = upgrade_subparsers.add_parser("migration-dry-run", help="Dry-run a migration")
+    upgrade_migration_dry.add_argument("migration_id")
+    upgrade_migration_dry.add_argument("--workspace", default=".")
+    upgrade_migration_dry.add_argument("--json", action="store_true")
+    upgrade_migration_dry.set_defaults(func=_cmd_upgrade_migration_dry_run)
+
+    upgrade_migration_apply = upgrade_subparsers.add_parser("migration-apply", help="Apply a migration")
+    upgrade_migration_apply.add_argument("migration_id")
+    upgrade_migration_apply.add_argument("--workspace", default=".")
+    upgrade_migration_apply.add_argument("--actor", default="system:migration")
+    upgrade_migration_apply.add_argument("--json", action="store_true")
+    upgrade_migration_apply.set_defaults(func=_cmd_upgrade_migration_apply)
+
+    upgrade_template_diff = upgrade_subparsers.add_parser("template-diff", help="Diff runtime templates")
+    upgrade_template_diff.add_argument("--workspace", default=".")
+    upgrade_template_diff.add_argument("--json", action="store_true")
+    upgrade_template_diff.set_defaults(func=_cmd_upgrade_template_diff)
+
+    upgrade_template_apply = upgrade_subparsers.add_parser("template-apply-new", help="Apply missing runtime templates only")
+    upgrade_template_apply.add_argument("--workspace", default=".")
+    upgrade_template_apply.add_argument("--actor", default="system:upgrade")
+    upgrade_template_apply.add_argument("--json", action="store_true")
+    upgrade_template_apply.set_defaults(func=_cmd_upgrade_template_apply_new)
+
     backup_parser = subparsers.add_parser("backup", help="Backup operations")
     backup_subparsers = backup_parser.add_subparsers(dest="backup_command", required=True)
     backup_create = backup_subparsers.add_parser("create", help="Create a workspace backup")
@@ -518,12 +800,7 @@ def build_parser() -> argparse.ArgumentParser:
     rollback_preview_parser.set_defaults(func=_cmd_rollback_preview)
 
     for name in [
-        "node",
-        "actor",
-        "skill",
-        "archive",
         "operation",
-        "upgrade",
     ]:
         reserved = subparsers.add_parser(name, help=f"Reserved {name} command group")
         reserved.add_argument("args", nargs="*")

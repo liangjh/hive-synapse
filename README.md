@@ -24,6 +24,7 @@ printf "# Launch Notes\n\nCurrent project practice." > /tmp/launch-notes.md
 uv run hive import add departments/engineering /tmp/launch-notes.md --workspace /tmp/hive-demo
 uv run hive promote sweep --workspace /tmp/hive-demo --create-proposals
 uv run hive job watchdog --workspace /tmp/hive-demo
+uv run hive upgrade doctor --workspace /tmp/hive-demo
 ```
 
 See [`docs/getting-started.md`](docs/getting-started.md) for the detailed guide.

@@ -27,6 +27,8 @@ REQUIRED_DIRS = [
     "memory/generated/context-packs",
     "memory/generated/graph",
     "memory/audit",
+    "memory/migrations",
+    "memory/skills",
     "memory/backups",
     "org/members",
     "org/roles",
@@ -34,6 +36,7 @@ REQUIRED_DIRS = [
     "org/signins",
     "personas",
     "policies",
+    "policies/nodes",
     "local-overrides",
 ]
 
@@ -46,6 +49,8 @@ APPEND_FRIENDLY_DIRS = [
     "memory/imports",
     "memory/operations",
     "memory/audit",
+    "memory/migrations",
+    "memory/skills",
     "memory/backups",
 ]
 
@@ -56,6 +61,7 @@ CONTROLLED_WRITER_DIRS = [
     "memory/generated",
     "org/assignments",
     "policies",
+    "policies/nodes",
 ]
 
 

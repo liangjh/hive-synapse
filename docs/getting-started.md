@@ -136,3 +136,18 @@ uv run hive job watchdog --workspace /tmp/hive-demo --enqueue
 ```
 
 Promotion is conservative by default. Sweeps can create proposals, but publishing requires an approved proposal and an authorized actor.
+
+
+## 11. Lifecycle, Skills, and Upgrades
+
+```bash
+uv run hive node create departments/research --workspace /tmp/hive-demo --kind department --title "Research" --parent org --actor human:admin
+uv run hive actor assign agent:research-001 --workspace /tmp/hive-demo --home-node departments/research --role contributor --actor human:admin
+uv run hive skill register literature-review --workspace /tmp/hive-demo --title "Literature Review" --scope departments/research --trigger "research synthesis" --actor steward:research
+uv run hive archive sweep --workspace /tmp/hive-demo
+uv run hive upgrade doctor --workspace /tmp/hive-demo
+uv run hive upgrade migration-dry-run 001_runtime_markers --workspace /tmp/hive-demo
+uv run hive upgrade template-diff --workspace /tmp/hive-demo
+```
+
+Runtime upgrade operations are designed to be non-clobbering. Template diffing reports differences first; template apply only creates missing files.
