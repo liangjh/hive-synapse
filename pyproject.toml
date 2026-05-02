@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "hive-synapse"
+version = "0.1.0"
+description = "Hierarchical memory and context management for organization-based AI agents"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+authors = [{ name = "Hive Synapse contributors" }]
+keywords = ["ai", "agents", "memory", "context", "obsidian", "mcp"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.5",
+]
+
+[project.scripts]
+hive = "hive_synapse.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/hive_synapse"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
