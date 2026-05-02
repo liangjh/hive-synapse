@@ -25,6 +25,7 @@ REQUIRED_DIRS = [
     "memory/generated/context-packs",
     "memory/generated/graph",
     "memory/audit",
+    "memory/backups",
     "org/members",
     "org/roles",
     "org/assignments",
@@ -41,6 +42,7 @@ APPEND_FRIENDLY_DIRS = [
     "memory/imports",
     "memory/operations",
     "memory/audit",
+    "memory/backups",
 ]
 
 CONTROLLED_WRITER_DIRS = [

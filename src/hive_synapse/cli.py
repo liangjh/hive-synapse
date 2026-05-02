@@ -7,8 +7,11 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .backup import create_backup, rollback_preview
 from .context import compile_context_pack
 from .errors import HiveError
+from .guardrails import dirty_markers_for_target
+from .paths import WorkspacePaths
 from .workspace import create_workspace
 from .validator import validate_workspace
 
@@ -57,6 +60,58 @@ def _cmd_context_compile(args: argparse.Namespace) -> int:
     return 0
 
 
+
+def _cmd_context_status(args: argparse.Namespace) -> int:
+    paths = WorkspacePaths(Path(args.workspace).resolve())
+    paths.require_workspace()
+    markers = dirty_markers_for_target(paths, args.target)
+    result = {
+        "ok": not markers,
+        "target": args.target,
+        "stale": bool(markers),
+        "dirty_markers": [str(path.relative_to(paths.root)) for path in markers],
+    }
+    if args.json:
+        _print_json(result)
+    else:
+        if markers:
+            print(f"Context stale for {args.target}")
+            for marker in markers:
+                print(f"- {marker.relative_to(paths.root)}")
+        else:
+            print(f"Context fresh for {args.target}")
+    return 1 if markers else 0
+
+
+def _cmd_backup_create(args: argparse.Namespace) -> int:
+    backup_dir, manifest_path, operation = create_backup(Path(args.path), actor=args.actor)
+    result = {
+        "ok": True,
+        "backup": str(backup_dir),
+        "manifest": str(manifest_path),
+        "operation": operation.id,
+    }
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Created backup: {backup_dir}")
+        print(f"Manifest: {manifest_path}")
+    return 0
+
+
+def _cmd_rollback_preview(args: argparse.Namespace) -> int:
+    result = rollback_preview(Path(args.workspace), args.operation_id)
+    if args.json:
+        _print_json(result)
+    else:
+        if result.get("ok"):
+            print(f"Rollback preview for {result['operation_id']}")
+            for path in result.get("would_touch", []):
+                print(f"- {path}")
+        else:
+            print(result.get("message", "Rollback preview failed"), file=sys.stderr)
+    return 0 if result.get("ok") else 1
+
 def _cmd_reserved(args: argparse.Namespace) -> int:
     message = f"Command group '{args.command}' is reserved and not implemented in this slice."
     if getattr(args, "json", False):
@@ -90,6 +145,28 @@ def build_parser() -> argparse.ArgumentParser:
     compile_parser.add_argument("--workspace", default=".")
     compile_parser.add_argument("--json", action="store_true")
     compile_parser.set_defaults(func=_cmd_context_compile)
+
+    status_parser = context_subparsers.add_parser("status", help="Check whether target context is fresh")
+    status_parser.add_argument("target")
+    status_parser.add_argument("--workspace", default=".")
+    status_parser.add_argument("--json", action="store_true")
+    status_parser.set_defaults(func=_cmd_context_status)
+
+    backup_parser = subparsers.add_parser("backup", help="Backup operations")
+    backup_subparsers = backup_parser.add_subparsers(dest="backup_command", required=True)
+    backup_create = backup_subparsers.add_parser("create", help="Create a workspace backup")
+    backup_create.add_argument("path", nargs="?", default=".")
+    backup_create.add_argument("--actor", default="system:backup")
+    backup_create.add_argument("--json", action="store_true")
+    backup_create.set_defaults(func=_cmd_backup_create)
+
+    rollback_parser = subparsers.add_parser("rollback", help="Rollback operations")
+    rollback_subparsers = rollback_parser.add_subparsers(dest="rollback_command", required=True)
+    rollback_preview_parser = rollback_subparsers.add_parser("preview", help="Preview rollback effects")
+    rollback_preview_parser.add_argument("operation_id")
+    rollback_preview_parser.add_argument("--workspace", default=".")
+    rollback_preview_parser.add_argument("--json", action="store_true")
+    rollback_preview_parser.set_defaults(func=_cmd_rollback_preview)
 
     for name in [
         "import",

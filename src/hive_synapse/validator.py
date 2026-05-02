@@ -7,6 +7,7 @@ from . import simple_yaml as yaml
 from .models import ModelValidationError
 
 from .frontmatter import read_markdown
+from .guardrails import validate_generated_artifact, validate_memory_guardrails
 from .models import EdgeRecord, MemoryRecord, NodeRecord, ValidationReport
 from .paths import REQUIRED_DIRS, WorkspacePaths
 
@@ -87,17 +88,13 @@ def validate_workspace(root: Path) -> ValidationReport:
                     f"Memory {record.id} references missing edge {record.edge}",
                     str(path),
                 )
-            if record.authority in SHARED_AUTHORITIES and not record.source_refs:
-                report.add_error(
-                    "memory.source_refs_missing",
-                    f"Memory {record.id} requires source_refs for authority {record.authority}",
-                    str(path),
-                )
+            validate_memory_guardrails(path=path, data=data, body=read_markdown(path).body, report=report)
         except ModelValidationError as exc:
             report.add_error("memory.invalid_record", str(exc), str(path))
 
     _detect_duplicate_yaml_ids(paths, report)
     _detect_sync_conflicts(paths, report)
+    _validate_generated_artifacts(paths, report)
     return report
 
 
@@ -125,3 +122,12 @@ def _detect_sync_conflicts(paths: WorkspacePaths, report: ValidationReport) -> N
         lower = path.name.lower()
         if any(marker in lower for marker in markers):
             report.add_error("workspace.sync_conflict", "Potential sync conflict file detected", str(path))
+
+
+
+def _validate_generated_artifacts(paths: WorkspacePaths, report: ValidationReport) -> None:
+    generated = paths.root / "memory" / "generated"
+    if not generated.exists():
+        return
+    for path in generated.rglob("*.md"):
+        validate_generated_artifact(path, report)

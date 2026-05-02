@@ -9,7 +9,7 @@ Hive Synapse is a filesystem-first memory framework for teams of humans and AI a
 Implementation has started with a dependency-free Python CLI/runtime scaffold. The current focus is the Markdown/Obsidian-compatible MVP:
 
 ```text
-hive init -> hive validate -> hive context compile
+hive init -> hive validate -> hive context compile, with repository safety, backups, and rollback preview
 ```
 
 ## Quick Start
@@ -19,6 +19,7 @@ uv run hive --help
 uv run hive init /tmp/hive-demo --fixture basic-org
 uv run hive validate /tmp/hive-demo
 uv run hive context compile departments/engineering --workspace /tmp/hive-demo
+uv run hive backup create /tmp/hive-demo
 ```
 
 See [`docs/getting-started.md`](docs/getting-started.md) for the detailed guide.

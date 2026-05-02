@@ -24,6 +24,9 @@ The first stable slice supports:
 hive init
 hive validate
 hive context compile
+hive context status
+hive backup create
+hive rollback preview
 ```
 
 Other command groups are reserved and will be implemented according to the backlog.
@@ -86,3 +89,13 @@ The context pack is generated. Do not hand-edit it as source of truth.
 ## 6. Next Capabilities
 
 Implementation proceeds according to [`implementation-backlog.md`](implementation-backlog.md): imports, promotion, invalidation, job runner, lifecycle, archive, migrations, MCP, and harness adapters.
+
+
+## 7. Create a Backup and Preview Rollback
+
+```bash
+uv run hive backup create /tmp/hive-demo
+uv run hive rollback preview <operation-id> --workspace /tmp/hive-demo
+```
+
+Backups live inside the organization workspace under `memory/backups/`. Rollback preview is intentionally read-only in this stage; rollback apply requires a later guarded implementation.
