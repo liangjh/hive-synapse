@@ -159,3 +159,13 @@ Promotion is conservative by default. Sweeps can create proposals, but publishin
 ```
 
 Runtime upgrade operations are designed to be non-clobbering. Template diffing reports differences first; template apply only creates missing files.
+
+## 12. Connector and Persistence Registries
+
+```bash
+./bin/hive connector list --json
+./bin/hive persistence list --json
+./bin/hive import fetch departments/engineering https://github.com/example/repo --connector github --workspace /tmp/hive-demo
+```
+
+Filesystem Markdown remains canonical in the MVP. Vector, relational, and temporal graph stores are modeled as future projections from canonical records.

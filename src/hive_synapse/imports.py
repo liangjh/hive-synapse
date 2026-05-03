@@ -2,9 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
-
 from . import simple_yaml as yaml
+from .connectors import classify_connector, external_ref_for
 from .frontmatter import write_markdown
 from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
@@ -107,20 +106,20 @@ def add_import(root: Path, target: str, source: str, *, actor: str = "system:imp
     return {"ok": True, "import_id": import_id, "item": item, "operation": operation.id}
 
 
-def fetch_import(root: Path, target: str, url: str, *, actor: str = "system:import") -> dict[str, Any]:
+def fetch_import(root: Path, target: str, url: str, *, connector: str | None = None, actor: str = "system:import") -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     import_root = _ensure_import_workspace(paths, target)
-    parsed = urlparse(url)
+    connector_name = classify_connector(url, connector)
     import_id = new_id("import")
     item = {
         "id": import_id,
         "workspace": f"import_workspace_{target.replace('/', '_')}",
         "target": target,
-        "source_type": "url",
+        "source_type": connector_name,
         "state": "dropped",
         "created_at": utc_now_iso(),
-        "external_ref": {"url": url, "scheme": parsed.scheme, "host": parsed.netloc},
+        "external_ref": external_ref_for(connector_name, url),
         "raw_preserved": False,
         "sensitivity": "unknown",
     }

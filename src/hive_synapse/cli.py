@@ -8,6 +8,7 @@ from typing import Any
 
 from . import __version__
 from .backup import create_backup, rollback_preview
+from .connectors import list_connectors
 from .context import compile_context_pack, context_impact, invalidate_context
 from .errors import HiveError
 from .guardrails import dirty_markers_for_target
@@ -21,6 +22,7 @@ from .skills import list_skills, register_skill, update_skill_status
 from .upgrade import doctor, list_migrations, migration_apply, migration_dry_run, template_apply_new, template_diff
 from .watchdog import watchdog_report
 from .paths import WorkspacePaths
+from .persistence import list_backends
 from .workspace import create_workspace
 from .validator import validate_workspace
 
@@ -125,7 +127,7 @@ def _cmd_import_add(args: argparse.Namespace) -> int:
 
 
 def _cmd_import_fetch(args: argparse.Namespace) -> int:
-    result = fetch_import(Path(args.workspace), args.target, args.url, actor=args.actor)
+    result = fetch_import(Path(args.workspace), args.target, args.url, connector=args.connector, actor=args.actor)
     if args.json:
         _print_json(result)
     else:
@@ -442,6 +444,27 @@ def _cmd_upgrade_template_apply_new(args: argparse.Namespace) -> int:
     return 0
 
 
+
+def _cmd_connector_list(args: argparse.Namespace) -> int:
+    result = list_connectors()
+    if args.json:
+        _print_json(result)
+    else:
+        for connector in result["connectors"]:
+            print(f"{connector['name']}: {connector['description']}")
+    return 0
+
+
+def _cmd_persistence_list(args: argparse.Namespace) -> int:
+    result = list_backends()
+    if args.json:
+        _print_json(result)
+    else:
+        for backend in result["backends"]:
+            marker = "canonical" if backend["canonical"] else backend["status"]
+            print(f"{backend['name']} ({marker}): {backend['description']}")
+    return 0
+
 def _cmd_mcp_tools(args: argparse.Namespace) -> int:
     result = list_tools()
     if args.json:
@@ -562,6 +585,7 @@ def build_parser() -> argparse.ArgumentParser:
     import_fetch.add_argument("target")
     import_fetch.add_argument("url")
     import_fetch.add_argument("--workspace", default=".")
+    import_fetch.add_argument("--connector", choices=["local", "obsidian", "url", "git", "github", "notion", "gdrive"])
     import_fetch.add_argument("--actor", default="system:import")
     import_fetch.add_argument("--json", action="store_true")
     import_fetch.set_defaults(func=_cmd_import_fetch)
@@ -807,6 +831,18 @@ def build_parser() -> argparse.ArgumentParser:
     upgrade_template_apply.add_argument("--actor", default="system:upgrade")
     upgrade_template_apply.add_argument("--json", action="store_true")
     upgrade_template_apply.set_defaults(func=_cmd_upgrade_template_apply_new)
+
+    connector_parser = subparsers.add_parser("connector", help="Connector registry operations")
+    connector_subparsers = connector_parser.add_subparsers(dest="connector_command", required=True)
+    connector_list = connector_subparsers.add_parser("list", help="List import connectors")
+    connector_list.add_argument("--json", action="store_true")
+    connector_list.set_defaults(func=_cmd_connector_list)
+
+    persistence_parser = subparsers.add_parser("persistence", help="Persistence backend registry")
+    persistence_subparsers = persistence_parser.add_subparsers(dest="persistence_command", required=True)
+    persistence_list = persistence_subparsers.add_parser("list", help="List persistence backends")
+    persistence_list.add_argument("--json", action="store_true")
+    persistence_list.set_defaults(func=_cmd_persistence_list)
 
     mcp_parser = subparsers.add_parser("mcp", help="MCP-compatible tool surface")
     mcp_subparsers = mcp_parser.add_subparsers(dest="mcp_command", required=True)

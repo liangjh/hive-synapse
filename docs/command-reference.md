@@ -6,6 +6,8 @@ Primary commands:
 - `hive validate <workspace>`
 - `hive context compile|status|impacted|invalidate`
 - `hive import add|fetch|classify|compact|propose`
+- `hive connector list`
+- `hive persistence list`
 - `hive promote list|review|apply|reject|sweep`
 - `hive job enqueue|list|claim|complete|fail|run|watchdog`
 - `hive node create|move|archive|restore`
