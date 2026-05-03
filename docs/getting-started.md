@@ -26,18 +26,7 @@ The MVP runtime has no required third-party dependencies. If you do not use `uv`
 ./bin/hive --help
 ```
 
-The first stable slice supports:
-
-```text
-hive init
-hive validate
-hive context compile
-hive context status
-hive backup create
-hive rollback preview
-```
-
-Other command groups are reserved and will be implemented according to the backlog.
+The current CLI supports workspace initialization, validation, context compilation/invalidation, imports, promotion review, jobs, lifecycle operations, skills, archives, upgrades, connector registries, persistence registries, and the MCP-compatible tool surface. See `docs/command-reference.md` for the full command list.
 
 ## 3. Create a Demo Workspace
 
@@ -94,12 +83,9 @@ memory/generated/context-packs/nodes/departments/engineering/
 
 The context pack is generated. Do not hand-edit it as source of truth.
 
-## 6. Next Capabilities
+## 6. Backup and Preview Rollback
 
-Implementation proceeds according to [`implementation-backlog.md`](implementation-backlog.md): imports, promotion, invalidation, job runner, lifecycle, archive, migrations, MCP, and harness adapters.
-
-
-## 7. Create a Backup and Preview Rollback
+## 6. Create a Backup and Preview Rollback
 
 ```bash
 ./bin/hive backup create /tmp/hive-demo
@@ -109,7 +95,7 @@ Implementation proceeds according to [`implementation-backlog.md`](implementatio
 Backups live inside the organization workspace under `memory/backups/`. Rollback preview is intentionally read-only in this stage; rollback apply requires a later guarded implementation.
 
 
-## 8. Import a Local Note
+## 7. Import a Local Note
 
 ```bash
 printf "# Launch Notes\n\nCurrent project practice." > /tmp/launch-notes.md
@@ -121,7 +107,7 @@ printf "# Launch Notes\n\nCurrent project practice." > /tmp/launch-notes.md
 
 Imports preserve raw source material under `memory/raw/` and create candidate memory only. They do not publish shared memory directly.
 
-## 9. Invalidate and Inspect Context Impact
+## 8. Invalidate and Inspect Context Impact
 
 ```bash
 ./bin/hive context impacted departments/engineering --workspace /tmp/hive-demo
@@ -132,7 +118,7 @@ Imports preserve raw source material under `memory/raw/` and create candidate me
 Dirty markers persist for dormant agents and should be checked at sign-in or before shared writes.
 
 
-## 10. Review, Promote, and Automate
+## 9. Review, Promote, and Automate
 
 ```bash
 ./bin/hive promote sweep --workspace /tmp/hive-demo --create-proposals --json
@@ -146,7 +132,7 @@ Dirty markers persist for dormant agents and should be checked at sign-in or bef
 Promotion is conservative by default. Sweeps can create proposals, but publishing requires an approved proposal and an authorized actor.
 
 
-## 11. Lifecycle, Skills, and Upgrades
+## 10. Lifecycle, Skills, and Upgrades
 
 ```bash
 ./bin/hive node create departments/research --workspace /tmp/hive-demo --kind department --title "Research" --parent org --actor human:admin
@@ -160,7 +146,7 @@ Promotion is conservative by default. Sweeps can create proposals, but publishin
 
 Runtime upgrade operations are designed to be non-clobbering. Template diffing reports differences first; template apply only creates missing files.
 
-## 12. Connector and Persistence Registries
+## 11. Connector and Persistence Registries
 
 ```bash
 ./bin/hive connector list --json
