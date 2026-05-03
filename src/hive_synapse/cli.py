@@ -14,6 +14,7 @@ from .guardrails import dirty_markers_for_target
 from .imports import add_import, classify_import, compact_import, fetch_import, propose_import
 from .archive import archive_sweep
 from .jobs import claim_job, complete_job, enqueue_job, fail_job, list_jobs, run_next_job
+from .mcp import call_tool, list_tools, serve_json_lines
 from .lifecycle import archive_actor, archive_node, assign_actor, create_node, move_node, restore_node
 from .promotion import apply_proposal, list_proposals, reject_proposal, review_proposal, sweep_promotability
 from .skills import list_skills, register_skill, update_skill_status
@@ -440,6 +441,30 @@ def _cmd_upgrade_template_apply_new(args: argparse.Namespace) -> int:
         print(f"Applied new template files: {len(result['changed_files'])}")
     return 0
 
+
+def _cmd_mcp_tools(args: argparse.Namespace) -> int:
+    result = list_tools()
+    if args.json:
+        _print_json(result)
+    else:
+        for tool in result["tools"]:
+            print(f"{tool['name']}: {tool['description']}")
+    return 0
+
+
+def _cmd_mcp_call(args: argparse.Namespace) -> int:
+    arguments = json.loads(args.args_json) if args.args_json else {}
+    if args.workspace:
+        arguments.setdefault("workspace", args.workspace)
+    result = call_tool(args.tool, arguments)
+    _print_json(result)
+    return 0 if result.get("ok", False) else 1
+
+
+def _cmd_mcp_serve(args: argparse.Namespace) -> int:
+    del args
+    return serve_json_lines()
+
 def _cmd_backup_create(args: argparse.Namespace) -> int:
     backup_dir, manifest_path, operation = create_backup(Path(args.path), actor=args.actor)
     result = {
@@ -782,6 +807,21 @@ def build_parser() -> argparse.ArgumentParser:
     upgrade_template_apply.add_argument("--actor", default="system:upgrade")
     upgrade_template_apply.add_argument("--json", action="store_true")
     upgrade_template_apply.set_defaults(func=_cmd_upgrade_template_apply_new)
+
+    mcp_parser = subparsers.add_parser("mcp", help="MCP-compatible tool surface")
+    mcp_subparsers = mcp_parser.add_subparsers(dest="mcp_command", required=True)
+    mcp_tools = mcp_subparsers.add_parser("tools", help="List available MCP tools")
+    mcp_tools.add_argument("--json", action="store_true")
+    mcp_tools.set_defaults(func=_cmd_mcp_tools)
+
+    mcp_call = mcp_subparsers.add_parser("call", help="Call an MCP tool")
+    mcp_call.add_argument("tool")
+    mcp_call.add_argument("--workspace")
+    mcp_call.add_argument("--args-json", default="{}")
+    mcp_call.set_defaults(func=_cmd_mcp_call)
+
+    mcp_serve = mcp_subparsers.add_parser("serve", help="Serve JSON-line MCP-compatible requests")
+    mcp_serve.set_defaults(func=_cmd_mcp_serve)
 
     backup_parser = subparsers.add_parser("backup", help="Backup operations")
     backup_subparsers = backup_parser.add_subparsers(dest="backup_command", required=True)

@@ -1,0 +1,5 @@
+{
+  "name": "hive-context-status-check",
+  "description": "Run before shared-memory writes; blocks stale context.",
+  "command": "hive context status ${HIVE_TARGET} --workspace ${HIVE_WORKSPACE} --json"
+}

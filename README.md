@@ -36,6 +36,10 @@ See [`docs/getting-started.md`](docs/getting-started.md) for the detailed guide.
 - [`docs/implementation-decisions.md`](docs/implementation-decisions.md): confirmed implementation defaults.
 - [`docs/concurrency-sync.md`](docs/concurrency-sync.md): Markdown/Obsidian concurrency strategy.
 - [`docs/distribution-upgrade.md`](docs/distribution-upgrade.md): runtime/workspace separation and non-clobbering upgrades.
+- [`docs/command-reference.md`](docs/command-reference.md): CLI command reference.
+- [`docs/workspace-layout.md`](docs/workspace-layout.md): workspace storage model.
+- [`docs/agent-onboarding.md`](docs/agent-onboarding.md): agent boot sequence and guardrails.
+- [`docs/mcp.md`](docs/mcp.md): MCP-compatible tool surface and adapter notes.
 
 ## License
 
