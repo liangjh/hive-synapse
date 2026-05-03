@@ -1,0 +1,7 @@
+id: "promotion_demo_001"
+source_record: "mem_demo_engineering_practice_001"
+source_scope: "departments/engineering/candidates"
+target_scope: "departments/engineering/published"
+promotion_type: "candidate_to_department"
+rationale: "Demo source-linked reusable practice."
+status: "candidate"

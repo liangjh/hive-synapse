@@ -1,0 +1,15 @@
+id: "op_20260503000244_26c4fa67"
+type: "workspace_init"
+actor: "system:init"
+started_at: "2026-05-03T00:02:44Z"
+status: "completed"
+targets:
+  - "/Users/jonathanl/Workspace/hive-synapse/fixtures/workspaces/basic-org"
+command: "hive init"
+mode: "apply"
+changed_files:
+  - path: "hive.config.yaml"
+changed_records: []
+rollback:
+  supported: false
+  strategy: "backup_restore"

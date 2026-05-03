@@ -1,0 +1,8 @@
+id: "assignment_codex_engineering_001"
+actor: "agent:codex-engineering-001"
+actor_kind: "agent"
+home_node: "departments/engineering"
+role: "contributor"
+status: "active"
+assigned_at: "2026-05-03T00:02:44Z"
+personal_memory_home: "memory/records/agents/codex-engineering-001/"

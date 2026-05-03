@@ -1,0 +1,4 @@
+id: "context_budget_default"
+budget_tokens: 24000
+warn_at_ratio: 0.8
+on_over_budget: "create_compaction_job"

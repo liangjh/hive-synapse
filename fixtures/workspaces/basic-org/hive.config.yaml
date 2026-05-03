@@ -1,0 +1,15 @@
+hive_workspace:
+  workspace_id: "basic-org"
+  schema_version: "0.1.0"
+  runtime_version: "0.1.0"
+  runtime_ref: null
+  data_root: "memory/"
+  policy_root: "policies/"
+  local_overrides_root: "local-overrides/"
+  generated_root: "memory/generated/"
+  install_mode: "external_runtime"
+  upgrade_policy:
+    require_dry_run: true
+    backup_before_migration: true
+    never_overwrite_local_context: true
+    require_operator_approval: false

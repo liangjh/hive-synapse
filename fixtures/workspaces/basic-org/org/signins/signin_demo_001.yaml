@@ -1,0 +1,10 @@
+id: "signin_demo_001"
+actor: "agent:codex-engineering-001"
+instance: "agent-instance:demo-run"
+assignment: "assignment_codex_engineering_001"
+effective_node: "departments/engineering"
+role: "contributor"
+started_at: "2026-05-03T00:02:44Z"
+status: "active"
+context_pack: "memory/generated/context-packs/nodes/departments/engineering/PACK.md"
+loaded_context_packs: []

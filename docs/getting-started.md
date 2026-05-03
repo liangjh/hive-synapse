@@ -6,8 +6,16 @@ This guide sets up a local Hive Synapse workspace for a team of agents.
 
 Hive Synapse is Python-first.
 
+Source checkout runner:
+
 ```bash
-uv run hive --help
+./bin/hive --help
+```
+
+Installed package entry point:
+
+```bash
+hive --help
 ```
 
 The MVP runtime has no required third-party dependencies. If you do not use `uv`, install the package in editable mode with your Python environment manager of choice.
@@ -15,7 +23,7 @@ The MVP runtime has no required third-party dependencies. If you do not use `uv`
 ## 2. Inspect the CLI
 
 ```bash
-uv run hive --help
+./bin/hive --help
 ```
 
 The first stable slice supports:
@@ -34,7 +42,7 @@ Other command groups are reserved and will be implemented according to the backl
 ## 3. Create a Demo Workspace
 
 ```bash
-uv run hive init /tmp/hive-demo --fixture basic-org
+./bin/hive init /tmp/hive-demo --fixture basic-org
 ```
 
 This creates a Markdown/YAML workspace:
@@ -67,7 +75,7 @@ Runtime-owned code and templates stay in this repository. The workspace owns loc
 ## 4. Validate the Workspace
 
 ```bash
-uv run hive validate /tmp/hive-demo
+./bin/hive validate /tmp/hive-demo
 ```
 
 Validation checks required directories, graph records, memory records, source references, and duplicate IDs.
@@ -75,7 +83,7 @@ Validation checks required directories, graph records, memory records, source re
 ## 5. Compile a Context Pack
 
 ```bash
-uv run hive context compile departments/engineering --workspace /tmp/hive-demo
+./bin/hive context compile departments/engineering --workspace /tmp/hive-demo
 ```
 
 The compiled pack is written under:
@@ -94,8 +102,8 @@ Implementation proceeds according to [`implementation-backlog.md`](implementatio
 ## 7. Create a Backup and Preview Rollback
 
 ```bash
-uv run hive backup create /tmp/hive-demo
-uv run hive rollback preview <operation-id> --workspace /tmp/hive-demo
+./bin/hive backup create /tmp/hive-demo
+./bin/hive rollback preview <operation-id> --workspace /tmp/hive-demo
 ```
 
 Backups live inside the organization workspace under `memory/backups/`. Rollback preview is intentionally read-only in this stage; rollback apply requires a later guarded implementation.
@@ -105,10 +113,10 @@ Backups live inside the organization workspace under `memory/backups/`. Rollback
 
 ```bash
 printf "# Launch Notes\n\nCurrent project practice." > /tmp/launch-notes.md
-uv run hive import add departments/engineering /tmp/launch-notes.md --workspace /tmp/hive-demo --json
-uv run hive import classify <import-id> --workspace /tmp/hive-demo
-uv run hive import compact <import-id> --workspace /tmp/hive-demo
-uv run hive import propose <import-id> --workspace /tmp/hive-demo
+./bin/hive import add departments/engineering /tmp/launch-notes.md --workspace /tmp/hive-demo --json
+./bin/hive import classify <import-id> --workspace /tmp/hive-demo
+./bin/hive import compact <import-id> --workspace /tmp/hive-demo
+./bin/hive import propose <import-id> --workspace /tmp/hive-demo
 ```
 
 Imports preserve raw source material under `memory/raw/` and create candidate memory only. They do not publish shared memory directly.
@@ -116,9 +124,9 @@ Imports preserve raw source material under `memory/raw/` and create candidate me
 ## 9. Invalidate and Inspect Context Impact
 
 ```bash
-uv run hive context impacted departments/engineering --workspace /tmp/hive-demo
-uv run hive context invalidate departments/engineering --workspace /tmp/hive-demo --reason "practice update"
-uv run hive context status departments/engineering --workspace /tmp/hive-demo
+./bin/hive context impacted departments/engineering --workspace /tmp/hive-demo
+./bin/hive context invalidate departments/engineering --workspace /tmp/hive-demo --reason "practice update"
+./bin/hive context status departments/engineering --workspace /tmp/hive-demo
 ```
 
 Dirty markers persist for dormant agents and should be checked at sign-in or before shared writes.
@@ -127,12 +135,12 @@ Dirty markers persist for dormant agents and should be checked at sign-in or bef
 ## 10. Review, Promote, and Automate
 
 ```bash
-uv run hive promote sweep --workspace /tmp/hive-demo --create-proposals --json
-uv run hive promote review <proposal-id> --workspace /tmp/hive-demo --decision approved --actor steward:engineering --rationale "source-backed reusable practice"
-uv run hive promote apply <proposal-id> --workspace /tmp/hive-demo --actor steward:engineering
-uv run hive job enqueue context_rebuild departments/engineering --workspace /tmp/hive-demo --reason "refresh after promotion"
-uv run hive job run --workspace /tmp/hive-demo
-uv run hive job watchdog --workspace /tmp/hive-demo --enqueue
+./bin/hive promote sweep --workspace /tmp/hive-demo --create-proposals --json
+./bin/hive promote review <proposal-id> --workspace /tmp/hive-demo --decision approved --actor steward:engineering --rationale "source-backed reusable practice"
+./bin/hive promote apply <proposal-id> --workspace /tmp/hive-demo --actor steward:engineering
+./bin/hive job enqueue context_rebuild departments/engineering --workspace /tmp/hive-demo --reason "refresh after promotion"
+./bin/hive job run --workspace /tmp/hive-demo
+./bin/hive job watchdog --workspace /tmp/hive-demo --enqueue
 ```
 
 Promotion is conservative by default. Sweeps can create proposals, but publishing requires an approved proposal and an authorized actor.
@@ -141,13 +149,13 @@ Promotion is conservative by default. Sweeps can create proposals, but publishin
 ## 11. Lifecycle, Skills, and Upgrades
 
 ```bash
-uv run hive node create departments/research --workspace /tmp/hive-demo --kind department --title "Research" --parent org --actor human:admin
-uv run hive actor assign agent:research-001 --workspace /tmp/hive-demo --home-node departments/research --role contributor --actor human:admin
-uv run hive skill register literature-review --workspace /tmp/hive-demo --title "Literature Review" --scope departments/research --trigger "research synthesis" --actor steward:research
-uv run hive archive sweep --workspace /tmp/hive-demo
-uv run hive upgrade doctor --workspace /tmp/hive-demo
-uv run hive upgrade migration-dry-run 001_runtime_markers --workspace /tmp/hive-demo
-uv run hive upgrade template-diff --workspace /tmp/hive-demo
+./bin/hive node create departments/research --workspace /tmp/hive-demo --kind department --title "Research" --parent org --actor human:admin
+./bin/hive actor assign agent:research-001 --workspace /tmp/hive-demo --home-node departments/research --role contributor --actor human:admin
+./bin/hive skill register literature-review --workspace /tmp/hive-demo --title "Literature Review" --scope departments/research --trigger "research synthesis" --actor steward:research
+./bin/hive archive sweep --workspace /tmp/hive-demo
+./bin/hive upgrade doctor --workspace /tmp/hive-demo
+./bin/hive upgrade migration-dry-run 001_runtime_markers --workspace /tmp/hive-demo
+./bin/hive upgrade template-diff --workspace /tmp/hive-demo
 ```
 
 Runtime upgrade operations are designed to be non-clobbering. Template diffing reports differences first; template apply only creates missing files.

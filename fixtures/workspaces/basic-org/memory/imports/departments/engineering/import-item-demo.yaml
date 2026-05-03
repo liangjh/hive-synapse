@@ -1,0 +1,9 @@
+id: "import_departments_engineering_demo_001"
+workspace: "import_workspace_departments_engineering"
+target: "departments/engineering"
+source_type: "markdown"
+state: "dropped"
+created_at: "2026-05-03T00:02:44Z"
+local_path: "memory/imports/departments/engineering/inbox/demo-source.md"
+raw_preserved: true
+sensitivity: "internal"

@@ -15,11 +15,11 @@ hive init -> hive validate -> hive context compile, with repository safety, back
 ## Quick Start
 
 ```bash
-uv run hive --help
-uv run hive init /tmp/hive-demo --fixture basic-org
-uv run hive validate /tmp/hive-demo
-uv run hive context compile departments/engineering --workspace /tmp/hive-demo
-uv run hive backup create /tmp/hive-demo
+./bin/hive --help
+./bin/hive init /tmp/hive-demo --fixture basic-org
+./bin/hive validate /tmp/hive-demo
+./bin/hive context compile departments/engineering --workspace /tmp/hive-demo
+./bin/hive backup create /tmp/hive-demo
 printf "# Launch Notes\n\nCurrent project practice." > /tmp/launch-notes.md
 uv run hive import add departments/engineering /tmp/launch-notes.md --workspace /tmp/hive-demo
 uv run hive promote sweep --workspace /tmp/hive-demo --create-proposals

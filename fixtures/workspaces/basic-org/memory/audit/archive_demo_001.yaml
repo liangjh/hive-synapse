@@ -1,0 +1,8 @@
+id: "archive_demo_001"
+target: "agents/retired-demo-agent"
+target_type: "node"
+reason: "Demo archived agent."
+archived_at: "2026-05-03T00:02:44Z"
+archived_by: "human:admin"
+status: "archived"
+excluded_from_startup_context: true
