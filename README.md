@@ -27,20 +27,20 @@ Hive Synapse organizes agent memory like infrastructure: raw sources are preserv
 | Hierarchical memory | Workspaces model organization, department, project/workflow, edge, actor, and agent-owned memory roots. | Agents inherit the right level of context instead of rediscovering team basics every run. |
 | Graph and cross-team context | Node and edge records capture shared context such as Engineering <-> Marketing launch work. | Agents can use collaboration-specific memory without broad access to every partner-team detail. |
 | Context pack compilation | `hive context compile` generates rebuildable packs under `memory/generated/context-packs/`. | Agent startup becomes inspectable and reproducible instead of depending on prompt stuffing or retrieval luck. |
-| Import staging | `hive import add|fetch|classify|compact|propose` stages local files, URLs, and connector references. | Existing docs, notes, and source material enter the system as evidence before they become trusted memory. |
+| Import staging | `hive import add\|fetch\|classify\|compact\|propose` stages local files, URLs, and connector references. | Existing docs, notes, and source material enter the system as evidence before they become trusted memory. |
 | Summarization and compaction | Import compaction creates source-linked candidate memory; broader node/edge/org compaction is represented in the command and job model. | Long-running work can be condensed into durable memory without carrying raw transcripts forever. |
-| Promotion workflow | `hive promote list|review|apply|reject|sweep` routes candidates through explicit review. | Agent-written observations cannot silently become shared organizational truth. |
+| Promotion workflow | `hive promote list\|review\|apply\|reject\|sweep` routes candidates through explicit review. | Agent-written observations cannot silently become shared organizational truth. |
 | Current and historical memory | Workspaces include `CURRENT.md`, `HISTORY.md`, archive records, deprecated state, and operation history. | Agents can distinguish what is true now from what was true during prior decisions. |
 | Longitudinal values and drift | The design tracks conflicts, drift, supersession, archives, and future temporal graph projections. | Agents can reason about changing practices instead of flattening history into one stale summary. |
-| Freshness and invalidation | `hive context impacted|invalidate|status` writes dirty markers for affected targets. | Active or future agents can detect stale context before shared writes or promotion decisions. |
+| Freshness and invalidation | `hive context impacted\|invalidate\|status` writes dirty markers for affected targets. | Active or future agents can detect stale context before shared writes or promotion decisions. |
 | Agent assignment and sign-in | Workspace records map actors to home nodes, roles, personal memory homes, sign-ins, and loaded context. | Each agent run has an operating contract: who it is, where it belongs, and what context it loaded. |
 | Guardrails and validation | `hive validate` checks required layout, graph records, memory records, source references, and duplicate IDs. | Memory safety is enforced by deterministic checks, not only by prompt instructions. |
 | Jobs and watchdogs | `hive job` commands enqueue, claim, run, complete, fail, and watchdog memory work. | Maintenance work such as rebuilds, imports, stale packs, and deferred review can be tracked explicitly. |
 | Rollback and audit | Mutating commands append operation records; backups and `hive rollback preview` support guarded recovery. | Bad imports, promotions, compactions, or lifecycle operations can be inspected before reversal. |
 | Lifecycle and archive | `hive node`, `hive actor`, `hive archive`, and related commands move entities out of active context while preserving history. | Retired agents, obsolete projects, and inactive teams do not pollute startup context. |
-| Shared skills | `hive skill register|list|status` models reusable skills at scoped locations. | Agent capabilities can be governed alongside memory instead of living as untracked local prompts. |
-| Harness-neutral access | CLI commands support JSON output, and `hive mcp tools|call|serve` exposes an MCP-compatible surface. | Codex, Claude Code, Cursor, ChatGPT, and custom harnesses can share one memory protocol. |
-| Upgrade safety | `hive upgrade doctor|migration-*|template-*` separates runtime changes from organization-owned memory. | Agent memory workspaces can evolve without clobbering local context, imports, or audit data. |
+| Shared skills | `hive skill register\|list\|status` models reusable skills at scoped locations. | Agent capabilities can be governed alongside memory instead of living as untracked local prompts. |
+| Harness-neutral access | CLI commands support JSON output, and `hive mcp tools\|call\|serve` exposes an MCP-compatible surface. | Codex, Claude Code, Cursor, ChatGPT, and custom harnesses can share one memory protocol. |
+| Upgrade safety | `hive upgrade doctor\|migration-*\|template-*` separates runtime changes from organization-owned memory. | Agent memory workspaces can evolve without clobbering local context, imports, or audit data. |
 
 ## Current Build Status
 
