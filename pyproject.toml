@@ -19,6 +19,9 @@ dev = [
   "pytest-cov>=5.0",
   "ruff>=0.5",
 ]
+llm = [
+  "litellm>=1.60",
+]
 
 [project.scripts]
 hive = "hive_synapse.cli:main"

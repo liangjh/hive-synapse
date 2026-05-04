@@ -4,14 +4,40 @@ from pathlib import Path
 from typing import Any
 from . import simple_yaml as yaml
 from .connectors import classify_connector, external_ref_for
+from .errors import WorkspaceError
 from .frontmatter import write_markdown
 from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
+from .llm import generate_structured, input_hash_for_path, should_use_model, write_model_run
 from .operations import OperationLog
 from .paths import WorkspacePaths, target_to_path_fragment
 from .repository import WorkspaceRepository, record_relative_path
 
 IMPORT_STATES = {"dropped", "classified", "compacted", "proposed", "processed", "rejected"}
+MODEL_INPUT_LIMIT = 12000
+
+CLASSIFICATION_SCHEMA = {
+    "type": "object",
+    "required": ["topics", "temporal_status", "sensitivity"],
+    "properties": {
+        "topics": {"type": "array", "items": {"type": "string"}},
+        "temporal_status": {"type": "string"},
+        "sensitivity": {"type": "string"},
+        "rationale": {"type": "string"},
+    },
+}
+
+COMPACTION_SCHEMA = {
+    "type": "object",
+    "required": ["summary", "confidence", "tags"],
+    "properties": {
+        "summary": {"type": "string"},
+        "confidence": {"type": "number"},
+        "tags": {"type": "array", "items": {"type": "string"}},
+        "sensitivity": {"type": "string"},
+        "rationale": {"type": "string"},
+    },
+}
 
 
 def _import_dir(paths: WorkspacePaths, target: str) -> Path:
@@ -27,7 +53,7 @@ def _load_import_item(paths: WorkspacePaths, import_id: str) -> tuple[Path, dict
     if not matches:
         matches = sorted((paths.root / "memory" / "imports").rglob(f"*{import_id}*.yaml"))
     if not matches:
-        raise FileNotFoundError(f"Import item not found: {import_id}")
+        raise WorkspaceError(f"Import item not found: {import_id}")
     path = matches[0]
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
     return path, data
@@ -35,6 +61,40 @@ def _load_import_item(paths: WorkspacePaths, import_id: str) -> tuple[Path, dict
 
 def _write_import_item(path: Path, data: dict[str, Any]) -> None:
     atomic_write_text(path, yaml.safe_dump(data, sort_keys=False))
+
+
+def _read_import_text(paths: WorkspacePaths, item: dict[str, Any]) -> str:
+    local_path = item.get("local_path")
+    if local_path and (paths.root / str(local_path)).exists():
+        return (paths.root / str(local_path)).read_text(encoding="utf-8", errors="ignore")
+    return ""
+
+
+def _import_input_refs(item: dict[str, Any]) -> list[dict[str, Any]]:
+    ref = item.get("source_ref") or item.get("external_ref") or {"source_id": f"import:{item.get('id')}"}
+    return [ref] if isinstance(ref, dict) else [{"source_id": f"import:{item.get('id')}", "locator": str(ref)}]
+
+
+def _string_list(value: Any, *, fallback: list[str] | None = None) -> list[str]:
+    result = []
+    if isinstance(value, list):
+        for item in value:
+            text = str(item).strip()
+            if text and text not in result:
+                result.append(text)
+    return result or list(fallback or [])
+
+
+def _confidence(value: Any, *, fallback: float = 0.6) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(0.0, min(1.0, parsed))
+
+
+def _model_descriptor(provider: str, model: str) -> str:
+    return f"llm:{provider}:{model}"
 
 
 def _ensure_import_workspace(paths: WorkspacePaths, target: str) -> Path:
@@ -137,56 +197,157 @@ def fetch_import(root: Path, target: str, url: str, *, connector: str | None = N
     return {"ok": True, "import_id": import_id, "item": item, "operation": operation.id}
 
 
-def classify_import(root: Path, import_id: str, *, sensitivity: str | None = None, actor: str = "system:import") -> dict[str, Any]:
+def classify_import(
+    root: Path,
+    import_id: str,
+    *,
+    sensitivity: str | None = None,
+    actor: str = "system:import",
+    llm_profile: str | None = None,
+    credential: str | None = None,
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     item_path, item = _load_import_item(paths, import_id)
-    local_path = item.get("local_path")
-    text = ""
-    if local_path and (paths.root / local_path).exists():
-        text = (paths.root / local_path).read_text(encoding="utf-8", errors="ignore")
-    lower = text.lower()
-    topics = []
-    for topic in ["policy", "practice", "project", "decision", "risk", "skill"]:
-        if topic in lower:
-            topics.append(topic)
-    if not topics:
-        topics.append("general")
-    item["classification"] = {
-        "target": item["target"],
-        "topics": topics,
-        "temporal_status": "current" if "deprecated" not in lower else "historical",
-        "sensitivity": sensitivity or ("confidential" if "confidential" in lower else "internal"),
-        "classified_at": utc_now_iso(),
-        "classifier": "deterministic:v0",
-    }
+    text = _read_import_text(paths, item)
+    model_run = None
+    if should_use_model(root, task="import_classify", actor=actor, profile_id=llm_profile):
+        request, response = generate_structured(
+            root,
+            task="import_classify",
+            actor=actor,
+            profile_id=llm_profile,
+            credential_id=credential,
+            expected_schema=CLASSIFICATION_SCHEMA,
+            input_refs=_import_input_refs(item),
+            input_hashes=input_hash_for_path(paths.root, item.get("local_path")),
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Classify imported memory for a workspace. Return only JSON with "
+                        "topics, temporal_status, sensitivity, and optional rationale. "
+                        "Do not invent facts beyond the supplied text."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Import id: {import_id}\n"
+                        f"Target: {item.get('target')}\n"
+                        f"Source type: {item.get('source_type')}\n\n"
+                        f"Text:\n{text[:MODEL_INPUT_LIMIT]}"
+                    ),
+                },
+            ],
+        )
+        output = response.output_json
+        classification = {
+            "target": item["target"],
+            "topics": _string_list(output.get("topics"), fallback=["general"]),
+            "temporal_status": str(output.get("temporal_status") or "current"),
+            "sensitivity": sensitivity or str(output.get("sensitivity") or "internal"),
+            "classified_at": utc_now_iso(),
+            "classifier": _model_descriptor(response.provider, response.model),
+            "model_profile": request.profile.get("id", "deterministic"),
+            "credential": (request.credential or {}).get("id", "none"),
+        }
+        if output.get("rationale"):
+            classification["rationale"] = str(output.get("rationale"))
+        model_run = write_model_run(root, request=request, response=response, status="completed")
+        classification["model_run"] = model_run["record"]["id"]
+    else:
+        lower = text.lower()
+        topics = []
+        for topic in ["policy", "practice", "project", "decision", "risk", "skill"]:
+            if topic in lower:
+                topics.append(topic)
+        if not topics:
+            topics.append("general")
+        classification = {
+            "target": item["target"],
+            "topics": topics,
+            "temporal_status": "current" if "deprecated" not in lower else "historical",
+            "sensitivity": sensitivity or ("confidential" if "confidential" in lower else "internal"),
+            "classified_at": utc_now_iso(),
+            "classifier": "deterministic:v0",
+        }
+    item["classification"] = classification
     item["sensitivity"] = item["classification"]["sensitivity"]
     item["state"] = "classified"
     _write_import_item(item_path, item)
+    changed_files = [{"path": record_relative_path(item_path, paths.root)}]
+    changed_records = [{"id": import_id, "type": "import_item"}]
+    if model_run:
+        changed_files.append({"path": record_relative_path(model_run["path"], paths.root)})
+        changed_records.append({"id": model_run["record"]["id"], "type": "llm_run"})
     operation = OperationLog(paths).append(
         operation_type="import_classify",
         actor=actor,
         targets=[import_id],
         command="hive import classify",
-        changed_files=[{"path": record_relative_path(item_path, paths.root)}],
-        changed_records=[{"id": import_id, "type": "import_item"}],
+        changed_files=changed_files,
+        changed_records=changed_records,
         rollback={"supported": True, "strategy": "restore_import_item_from_backup"},
     )
     return {"ok": True, "import_id": import_id, "classification": item["classification"], "operation": operation.id}
 
 
-def compact_import(root: Path, import_id: str, *, actor: str = "system:import") -> dict[str, Any]:
+def compact_import(
+    root: Path,
+    import_id: str,
+    *,
+    actor: str = "system:import",
+    llm_profile: str | None = None,
+    credential: str | None = None,
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     item_path, item = _load_import_item(paths, import_id)
     if "classification" not in item:
-        classify_import(root, import_id, actor=actor)
+        classify_import(root, import_id, actor=actor, llm_profile=llm_profile, credential=credential)
         item_path, item = _load_import_item(paths, import_id)
-    local_path = item.get("local_path")
-    text = ""
-    if local_path and (paths.root / local_path).exists():
-        text = (paths.root / local_path).read_text(encoding="utf-8", errors="ignore")
-    summary = " ".join(text.strip().split())[:600]
+    text = _read_import_text(paths, item)
+    model_run = None
+    model_response = None
+    model_request = None
+    model_output: dict[str, Any] = {}
+    if should_use_model(root, task="import_compact", actor=actor, profile_id=llm_profile):
+        model_request, model_response = generate_structured(
+            root,
+            task="import_compact",
+            actor=actor,
+            profile_id=llm_profile,
+            credential_id=credential,
+            expected_schema=COMPACTION_SCHEMA,
+            input_refs=_import_input_refs(item),
+            input_hashes=input_hash_for_path(paths.root, item.get("local_path")),
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "Summarize imported source text into concise candidate memory. "
+                        "Return only JSON with summary, confidence, tags, optional sensitivity, "
+                        "and optional rationale. Preserve source-grounded facts and avoid invention."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Import id: {import_id}\n"
+                        f"Target node: {item.get('target')}\n"
+                        f"Classification: {yaml.safe_dump(item.get('classification') or {}, sort_keys=False)}\n\n"
+                        f"Text:\n{text[:MODEL_INPUT_LIMIT]}"
+                    ),
+                },
+            ],
+        )
+        model_output = model_response.output_json
+        summary = " ".join(str(model_output.get("summary") or "").strip().split())
+        if not summary:
+            raise WorkspaceError("Model compaction response did not include a summary")
+    else:
+        summary = " ".join(text.strip().split())[:600]
     if not summary:
         result = {"id": new_id("import_result"), "import_id": import_id, "status": "no_changes", "created_at": utc_now_iso()}
         result_path = _import_dir(paths, item["target"]) / "compacted" / f"{result['id']}.yaml"
@@ -200,29 +361,55 @@ def compact_import(root: Path, import_id: str, *, actor: str = "system:import") 
         "scope": "node",
         "node": target,
         "authority": "candidate",
-        "confidence": 0.6,
-        "sensitivity": item.get("sensitivity", "internal"),
+        "confidence": _confidence(model_output.get("confidence"), fallback=0.6),
+        "sensitivity": model_output.get("sensitivity") or item.get("sensitivity", "internal"),
         "created_at": utc_now_iso(),
         "created_by": actor,
         "source_refs": [item.get("source_ref") or item.get("external_ref") or {"source_id": f"import:{import_id}"}],
-        "tags": ["import", *item.get("classification", {}).get("topics", [])],
+        "tags": _string_list(
+            ["import", *item.get("classification", {}).get("topics", []), *_string_list(model_output.get("tags"))],
+            fallback=["import"],
+        ),
         "import_id": import_id,
     }
+    if model_request and model_response:
+        model_run = write_model_run(
+            root,
+            request=model_request,
+            response=model_response,
+            status="completed",
+            created_records=[memory_id],
+        )
+        candidate["generated_by"] = {
+            "type": "llm",
+            "run_id": model_run["record"]["id"],
+            "provider": model_response.provider,
+            "model": model_response.model,
+            "profile": model_request.profile.get("id", "deterministic"),
+            "credential": (model_request.credential or {}).get("id", "none"),
+        }
+        if model_output.get("rationale"):
+            candidate["generation_rationale"] = str(model_output.get("rationale"))
     candidate_path = paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "candidates" / f"{memory_id}.md"
     write_markdown(candidate_path, candidate, f"# Import Candidate\n\n{summary}\n")
     item["state"] = "compacted"
     item.setdefault("candidate_records", []).append(memory_id)
     _write_import_item(item_path, item)
+    changed_files = [
+        {"path": record_relative_path(candidate_path, paths.root)},
+        {"path": record_relative_path(item_path, paths.root)},
+    ]
+    changed_records = [{"id": memory_id, "type": "memory_record"}, {"id": import_id, "type": "import_item"}]
+    if model_run:
+        changed_files.append({"path": record_relative_path(model_run["path"], paths.root)})
+        changed_records.append({"id": model_run["record"]["id"], "type": "llm_run"})
     operation = OperationLog(paths).append(
         operation_type="import_compact",
         actor=actor,
         targets=[import_id, target],
         command="hive import compact",
-        changed_files=[
-            {"path": record_relative_path(candidate_path, paths.root)},
-            {"path": record_relative_path(item_path, paths.root)},
-        ],
-        changed_records=[{"id": memory_id, "type": "memory_record"}, {"id": import_id, "type": "import_item"}],
+        changed_files=changed_files,
+        changed_records=changed_records,
         rollback={"supported": True, "strategy": "remove_candidate_restore_import_item"},
     )
     return {"ok": True, "import_id": import_id, "candidate_id": memory_id, "candidate_path": str(candidate_path), "operation": operation.id}

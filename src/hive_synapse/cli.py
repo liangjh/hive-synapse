@@ -15,6 +15,15 @@ from .guardrails import dirty_markers_for_target
 from .imports import add_import, classify_import, compact_import, fetch_import, propose_import
 from .archive import archive_sweep
 from .jobs import claim_job, complete_job, enqueue_job, fail_job, list_jobs, run_next_job
+from .llm import (
+    add_credential,
+    add_profile,
+    assign_credential,
+    assign_profile,
+    ensure_llm_policy,
+    list_llm_config,
+    list_providers,
+)
 from .mcp import call_tool, list_tools, serve_json_lines
 from .lifecycle import archive_actor, archive_node, assign_actor, create_node, move_node, restore_node
 from .promotion import apply_proposal, list_proposals, reject_proposal, review_proposal, sweep_promotability
@@ -39,6 +48,127 @@ def _cmd_init(args: argparse.Namespace) -> int:
         _print_json(result)
     else:
         print(f"Initialized workspace: {paths.root}")
+    return 0
+
+
+def _add_llm_selection_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--llm-profile", help="LLM profile id to use for this operation")
+    parser.add_argument("--credential", help="Credential id to use for this operation, or 'none'")
+
+
+def _cmd_llm_init(args: argparse.Namespace) -> int:
+    result = ensure_llm_policy(Path(args.workspace), actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print("Initialized LLM policy files")
+        if result.get("operation"):
+            print(f"Operation: {result['operation']}")
+    return 0
+
+
+def _cmd_llm_providers(args: argparse.Namespace) -> int:
+    result = list_providers()
+    if args.json:
+        _print_json(result)
+    else:
+        for provider in result["providers"]:
+            dependency = f" dependency={provider['requires_dependency']}" if provider.get("requires_dependency") else ""
+            network = "network" if provider.get("network") else "offline"
+            print(f"{provider['name']} ({network}{dependency}): {provider['description']}")
+    return 0
+
+
+def _cmd_llm_config(args: argparse.Namespace) -> int:
+    result = list_llm_config(Path(args.workspace))
+    if args.json:
+        _print_json(result)
+    else:
+        policy = result["policy"]
+        registry = result["credentials"]
+        print(f"Enabled: {policy.get('enabled')}")
+        print(f"Organization profile: {policy.get('organization_profile')}")
+        print(f"Organization credential: {registry.get('organization_credential')}")
+        print(f"Profiles: {len(policy.get('profiles') or [])}")
+        print(f"Credentials: {len(registry.get('credentials') or [])}")
+    return 0
+
+
+def _cmd_llm_credential_add(args: argparse.Namespace) -> int:
+    result = add_credential(
+        Path(args.workspace),
+        args.credential_id,
+        provider=args.provider,
+        api_key_env=args.api_key_env,
+        actor=args.actor,
+        assign_actor=args.assign_actor,
+        organization_default=args.organization_default,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Upserted LLM credential: {result['credential']['id']}")
+    return 0
+
+
+def _cmd_llm_credential_assign(args: argparse.Namespace) -> int:
+    result = assign_credential(
+        Path(args.workspace),
+        args.credential_id,
+        actor=args.actor,
+        assign_actor=args.assign_actor,
+        organization_default=args.organization_default,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Assigned LLM credential: {args.credential_id}")
+    return 0
+
+
+def _cmd_llm_profile_add(args: argparse.Namespace) -> int:
+    try:
+        command = json.loads(args.command_json) if args.command_json else None
+    except json.JSONDecodeError as exc:
+        raise HiveError("--command-json must be a JSON array of command argv strings") from exc
+    if command is not None and not isinstance(command, list):
+        raise HiveError("--command-json must be a JSON array of command argv strings")
+    result = add_profile(
+        Path(args.workspace),
+        args.profile_id,
+        provider=args.provider,
+        model=args.model,
+        base_url=args.base_url,
+        credential=args.credential,
+        command=command,
+        temperature=args.temperature,
+        max_output_tokens=args.max_output_tokens,
+        actor=args.actor,
+        assign_actor=args.assign_actor,
+        organization_default=args.organization_default,
+        enable=args.enable,
+        allow_network_models=args.allow_network_models,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Upserted LLM profile: {result['profile']['id']}")
+    return 0
+
+
+def _cmd_llm_profile_assign(args: argparse.Namespace) -> int:
+    result = assign_profile(
+        Path(args.workspace),
+        args.profile_id,
+        actor=args.actor,
+        assign_actor=args.assign_actor,
+        organization_default=args.organization_default,
+        enable=args.enable,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Assigned LLM profile: {args.profile_id}")
     return 0
 
 
@@ -147,7 +277,14 @@ def _cmd_import_fetch(args: argparse.Namespace) -> int:
 
 
 def _cmd_import_classify(args: argparse.Namespace) -> int:
-    result = classify_import(Path(args.workspace), args.import_id, sensitivity=args.sensitivity, actor=args.actor)
+    result = classify_import(
+        Path(args.workspace),
+        args.import_id,
+        sensitivity=args.sensitivity,
+        actor=args.actor,
+        llm_profile=args.llm_profile,
+        credential=args.credential,
+    )
     if args.json:
         _print_json(result)
     else:
@@ -156,7 +293,13 @@ def _cmd_import_classify(args: argparse.Namespace) -> int:
 
 
 def _cmd_import_compact(args: argparse.Namespace) -> int:
-    result = compact_import(Path(args.workspace), args.import_id, actor=args.actor)
+    result = compact_import(
+        Path(args.workspace),
+        args.import_id,
+        actor=args.actor,
+        llm_profile=args.llm_profile,
+        credential=args.credential,
+    )
     if args.json:
         _print_json(result)
     else:
@@ -225,6 +368,8 @@ def _cmd_promote_sweep(args: argparse.Namespace) -> int:
         Path(args.workspace),
         create_proposals=args.create_proposals,
         actor=args.actor,
+        llm_profile=args.llm_profile,
+        credential=args.credential,
     )
     if args.json:
         _print_json(result)
@@ -570,6 +715,76 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser.add_argument("--json", action="store_true")
     validate_parser.set_defaults(func=_cmd_validate)
 
+    llm_parser = subparsers.add_parser("llm", help="LLM provider, profile, and credential operations")
+    llm_subparsers = llm_parser.add_subparsers(dest="llm_command", required=True)
+
+    llm_init = llm_subparsers.add_parser("init", help="Create default LLM policy and credential registry files")
+    llm_init.add_argument("--workspace", default=".")
+    llm_init.add_argument("--actor", default="system:llm")
+    llm_init.add_argument("--json", action="store_true")
+    llm_init.set_defaults(func=_cmd_llm_init)
+
+    llm_providers = llm_subparsers.add_parser("providers", help="List supported LLM providers")
+    llm_providers.add_argument("--json", action="store_true")
+    llm_providers.set_defaults(func=_cmd_llm_providers)
+
+    llm_config = llm_subparsers.add_parser("config", help="Show LLM policy and credential registry")
+    llm_config.add_argument("--workspace", default=".")
+    llm_config.add_argument("--json", action="store_true")
+    llm_config.set_defaults(func=_cmd_llm_config)
+
+    llm_credential = llm_subparsers.add_parser("credential", help="Manage LLM credentials")
+    llm_credential_subparsers = llm_credential.add_subparsers(dest="llm_credential_command", required=True)
+    llm_credential_add = llm_credential_subparsers.add_parser("add", help="Add or update an LLM credential")
+    llm_credential_add.add_argument("credential_id")
+    llm_credential_add.add_argument("--workspace", default=".")
+    llm_credential_add.add_argument("--provider", required=True)
+    llm_credential_add.add_argument("--api-key-env")
+    llm_credential_add.add_argument("--actor", default="system:llm")
+    llm_credential_add.add_argument("--assign-actor")
+    llm_credential_add.add_argument("--organization-default", action="store_true")
+    llm_credential_add.add_argument("--json", action="store_true")
+    llm_credential_add.set_defaults(func=_cmd_llm_credential_add)
+
+    llm_credential_assign = llm_credential_subparsers.add_parser("assign", help="Assign a credential to an actor or organization")
+    llm_credential_assign.add_argument("credential_id", help="Credential id, or 'none'")
+    llm_credential_assign.add_argument("--workspace", default=".")
+    llm_credential_assign.add_argument("--actor", default="system:llm")
+    llm_credential_assign.add_argument("--assign-actor")
+    llm_credential_assign.add_argument("--organization-default", action="store_true")
+    llm_credential_assign.add_argument("--json", action="store_true")
+    llm_credential_assign.set_defaults(func=_cmd_llm_credential_assign)
+
+    llm_profile = llm_subparsers.add_parser("profile", help="Manage LLM profiles")
+    llm_profile_subparsers = llm_profile.add_subparsers(dest="llm_profile_command", required=True)
+    llm_profile_add = llm_profile_subparsers.add_parser("add", help="Add or update an LLM profile")
+    llm_profile_add.add_argument("profile_id")
+    llm_profile_add.add_argument("--workspace", default=".")
+    llm_profile_add.add_argument("--provider", required=True)
+    llm_profile_add.add_argument("--model", required=True)
+    llm_profile_add.add_argument("--base-url")
+    llm_profile_add.add_argument("--credential")
+    llm_profile_add.add_argument("--command-json", help="JSON argv array for command provider profiles")
+    llm_profile_add.add_argument("--temperature", type=float)
+    llm_profile_add.add_argument("--max-output-tokens", type=int)
+    llm_profile_add.add_argument("--actor", default="system:llm")
+    llm_profile_add.add_argument("--assign-actor")
+    llm_profile_add.add_argument("--organization-default", action="store_true")
+    llm_profile_add.add_argument("--enable", action="store_true")
+    llm_profile_add.add_argument("--allow-network-models", action="store_true")
+    llm_profile_add.add_argument("--json", action="store_true")
+    llm_profile_add.set_defaults(func=_cmd_llm_profile_add)
+
+    llm_profile_assign = llm_profile_subparsers.add_parser("assign", help="Assign a profile to an actor or organization")
+    llm_profile_assign.add_argument("profile_id", help="Profile id, such as deterministic")
+    llm_profile_assign.add_argument("--workspace", default=".")
+    llm_profile_assign.add_argument("--actor", default="system:llm")
+    llm_profile_assign.add_argument("--assign-actor")
+    llm_profile_assign.add_argument("--organization-default", action="store_true")
+    llm_profile_assign.add_argument("--enable", action="store_true")
+    llm_profile_assign.add_argument("--json", action="store_true")
+    llm_profile_assign.set_defaults(func=_cmd_llm_profile_assign)
+
     context_parser = subparsers.add_parser("context", help="Context pack operations")
     context_subparsers = context_parser.add_subparsers(dest="context_command", required=True)
     compile_parser = context_subparsers.add_parser("compile", help="Compile a context pack")
@@ -627,6 +842,7 @@ def build_parser() -> argparse.ArgumentParser:
     import_classify.add_argument("--workspace", default=".")
     import_classify.add_argument("--sensitivity")
     import_classify.add_argument("--actor", default="system:import")
+    _add_llm_selection_args(import_classify)
     import_classify.add_argument("--json", action="store_true")
     import_classify.set_defaults(func=_cmd_import_classify)
 
@@ -634,6 +850,7 @@ def build_parser() -> argparse.ArgumentParser:
     import_compact.add_argument("import_id")
     import_compact.add_argument("--workspace", default=".")
     import_compact.add_argument("--actor", default="system:import")
+    _add_llm_selection_args(import_compact)
     import_compact.add_argument("--json", action="store_true")
     import_compact.set_defaults(func=_cmd_import_compact)
 
@@ -680,6 +897,7 @@ def build_parser() -> argparse.ArgumentParser:
     promote_sweep.add_argument("--workspace", default=".")
     promote_sweep.add_argument("--create-proposals", action="store_true", default=None)
     promote_sweep.add_argument("--actor", default="system:sweep")
+    _add_llm_selection_args(promote_sweep)
     promote_sweep.add_argument("--json", action="store_true")
     promote_sweep.set_defaults(func=_cmd_promote_sweep)
 

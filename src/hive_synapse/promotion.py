@@ -9,11 +9,25 @@ from .errors import WorkspaceError
 from .frontmatter import dump_markdown, read_markdown, write_markdown
 from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
+from .llm import generate_structured, input_hash_for_path, should_use_model, write_model_run
 from .operations import OperationLog
 from .paths import WorkspacePaths, target_to_path_fragment
 from .policies import operation_policy
 
 AUTHORIZED_REVIEW_PREFIXES = ("steward:", "human:admin", "system:")
+
+PROMOTION_SCHEMA = {
+    "type": "object",
+    "required": ["recommended", "confidence", "rationale"],
+    "properties": {
+        "recommended": {"type": "boolean"},
+        "confidence": {"type": "number"},
+        "rationale": {"type": "string"},
+        "risk_flags": {"type": "array", "items": {"type": "string"}},
+        "missing_evidence": {"type": "array", "items": {"type": "string"}},
+        "recommended_target_scope": {"type": "string"},
+    },
+}
 
 
 def _proposal_paths(paths: WorkspacePaths) -> list[Path]:
@@ -59,6 +73,33 @@ def _target_from_scope(scope: str) -> str:
 
 def _authorized(actor: str) -> bool:
     return actor.startswith(AUTHORIZED_REVIEW_PREFIXES)
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    result = []
+    for item in value:
+        text = str(item).strip()
+        if text and text not in result:
+            result.append(text)
+    return result
+
+
+def _confidence(value: Any, *, fallback: float = 0.6) -> float:
+    try:
+        parsed = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return max(0.0, min(1.0, parsed))
+
+
+def _bool_value(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.strip().lower() in {"true", "yes", "1", "recommended"}
+    return bool(value)
 
 
 def list_proposals(root: Path, *, status: str | None = None) -> dict[str, Any]:
@@ -173,17 +214,27 @@ def reject_proposal(root: Path, proposal_id: str, *, actor: str, rationale: str)
     return review_proposal(root, proposal_id, decision="rejected", actor=actor, rationale=rationale)
 
 
-def sweep_promotability(root: Path, *, create_proposals: bool | None = None, actor: str = "system:sweep") -> dict[str, Any]:
+def sweep_promotability(
+    root: Path,
+    *,
+    create_proposals: bool | None = None,
+    actor: str = "system:sweep",
+    llm_profile: str | None = None,
+    credential: str | None = None,
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     policy = operation_policy(paths, "promotion")
     if create_proposals is None:
         create_proposals = bool(policy.get("create_proposals_by_default", False))
+    use_model = should_use_model(root, task="promotion_sweep", actor=actor, profile_id=llm_profile)
     promotable = []
     needs_more_evidence = []
     conflicts_detected = []
     not_promotable = []
     created = []
+    changed_files = []
+    changed_records = []
     for path in sorted((paths.root / "memory" / "records").rglob("candidates/*.md")):
         doc = read_markdown(path)
         data = doc.frontmatter
@@ -204,6 +255,8 @@ def sweep_promotability(root: Path, *, create_proposals: bool | None = None, act
             }
             conflict_path = paths.root / "memory" / "conflicts" / f"{conflict_id}.yaml"
             atomic_write_text(conflict_path, yaml.safe_dump(conflict, sort_keys=False))
+            changed_files.append({"path": str(conflict_path.relative_to(paths.root))})
+            changed_records.append({"id": conflict_id, "type": "memory_conflict"})
             conflicts_detected.append({**record, "conflict_id": conflict_id})
             continue
         if not data.get("source_refs"):
@@ -212,24 +265,114 @@ def sweep_promotability(root: Path, *, create_proposals: bool | None = None, act
         if data.get("authority") != "candidate":
             not_promotable.append(record)
             continue
+        advisory = None
+        model_request = None
+        model_response = None
+        if use_model:
+            try:
+                model_request, model_response = generate_structured(
+                    root,
+                    task="promotion_sweep",
+                    actor=actor,
+                    profile_id=llm_profile,
+                    credential_id=credential,
+                    expected_schema=PROMOTION_SCHEMA,
+                    input_refs=data.get("source_refs") or [],
+                    input_hashes=input_hash_for_path(paths.root, str(path.relative_to(paths.root))),
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "Judge whether candidate memory is ready to be proposed for promotion. "
+                                "Return only JSON with recommended, confidence, rationale, risk_flags, "
+                                "missing_evidence, and optional recommended_target_scope. Be conservative "
+                                "when evidence is missing or text appears conflicted."
+                            ),
+                        },
+                        {
+                            "role": "user",
+                            "content": (
+                                f"Candidate metadata:\n{yaml.safe_dump(data, sort_keys=False)}\n\n"
+                                f"Candidate body:\n{doc.body[:12000]}"
+                            ),
+                        },
+                    ],
+                )
+                output = model_response.output_json
+                advisory = {
+                    "recommended": _bool_value(output.get("recommended")),
+                    "confidence": _confidence(output.get("confidence"), fallback=0.5),
+                    "rationale": str(output.get("rationale") or ""),
+                    "risk_flags": _string_list(output.get("risk_flags")),
+                    "missing_evidence": _string_list(output.get("missing_evidence")),
+                    "recommended_target_scope": output.get("recommended_target_scope") or f"{data.get('node') or 'org'}/published",
+                    "provider": model_response.provider,
+                    "model": model_response.model,
+                    "profile": model_request.profile.get("id", "deterministic"),
+                    "credential": (model_request.credential or {}).get("id", "none"),
+                }
+                if not advisory["recommended"]:
+                    run = write_model_run(root, request=model_request, response=model_response, status="completed")
+                    advisory["model_run"] = run["record"]["id"]
+                    changed_files.append({"path": str(run["path"].relative_to(paths.root))})
+                    changed_records.append({"id": run["record"]["id"], "type": "llm_run"})
+                    blocked = {**record, "llm_advisory": advisory}
+                    if advisory["missing_evidence"]:
+                        needs_more_evidence.append(blocked)
+                    else:
+                        not_promotable.append(blocked)
+                    continue
+            except WorkspaceError as exc:
+                run_request = model_request
+                if run_request is not None:
+                    run = write_model_run(root, request=run_request, response=None, status="failed", error=str(exc))
+                    changed_files.append({"path": str(run["path"].relative_to(paths.root))})
+                    changed_records.append({"id": run["record"]["id"], "type": "llm_run"})
+                not_promotable.append({**record, "llm_error": str(exc)})
+                continue
+        if advisory:
+            record["llm_advisory"] = advisory
         promotable.append(record)
         if create_proposals:
             proposal_id = new_id("proposal")
             node = data.get("node") or "org"
+            model_run = None
+            if model_request and model_response and advisory:
+                model_run = write_model_run(
+                    root,
+                    request=model_request,
+                    response=model_response,
+                    status="completed",
+                    created_proposals=[proposal_id],
+                )
+                advisory["model_run"] = model_run["record"]["id"]
+                record["llm_advisory"] = advisory
+                changed_files.append({"path": str(model_run["path"].relative_to(paths.root))})
+                changed_records.append({"id": model_run["record"]["id"], "type": "llm_run"})
             proposal = {
                 "id": proposal_id,
                 "source_record": data.get("id"),
                 "source_scope": f"{node}/candidates",
-                "target_scope": f"{node}/published",
+                "target_scope": advisory.get("recommended_target_scope") if advisory else f"{node}/published",
                 "promotion_type": "sweep_candidate_to_node",
-                "rationale": "Promotability sweep found source-linked candidate memory.",
+                "rationale": advisory.get("rationale") if advisory and advisory.get("rationale") else "Promotability sweep found source-linked candidate memory.",
                 "status": "candidate",
                 "created_at": utc_now_iso(),
                 "created_by": actor,
             }
+            if advisory:
+                proposal["llm_advisory"] = advisory
             proposal_path = paths.root / "memory" / "proposals" / f"{proposal_id}.yaml"
             atomic_write_text(proposal_path, yaml.safe_dump(proposal, sort_keys=False))
+            changed_files.append({"path": str(proposal_path.relative_to(paths.root))})
+            changed_records.append({"id": proposal_id, "type": "promotion_proposal"})
             created.append(proposal)
+        elif model_request and model_response and advisory:
+            model_run = write_model_run(root, request=model_request, response=model_response, status="completed")
+            advisory["model_run"] = model_run["record"]["id"]
+            record["llm_advisory"] = advisory
+            changed_files.append({"path": str(model_run["path"].relative_to(paths.root))})
+            changed_records.append({"id": model_run["record"]["id"], "type": "llm_run"})
     status = "no_changes" if not any([promotable, needs_more_evidence, conflicts_detected, created]) else "completed"
     report = {
         "ok": True,
@@ -247,13 +390,15 @@ def sweep_promotability(root: Path, *, create_proposals: bool | None = None, act
     report_id = new_id("promotability")
     report_path = paths.root / "memory" / "audit" / f"{report_id}.yaml"
     atomic_write_text(report_path, yaml.safe_dump({"id": report_id, **report}, sort_keys=False))
+    changed_files.append({"path": str(report_path.relative_to(paths.root))})
+    changed_records.append({"id": report_id, "type": "promotability_report"})
     OperationLog(paths).append(
         operation_type="promotion_sweep",
         actor=actor,
         targets=[str(paths.root)],
         command="hive promote sweep",
-        changed_files=[{"path": str(report_path.relative_to(paths.root))}],
-        changed_records=[{"id": report_id, "type": "promotability_report"}],
+        changed_files=changed_files,
+        changed_records=changed_records,
         rollback={"supported": False, "strategy": "report_only"},
     )
     return report
