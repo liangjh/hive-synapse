@@ -22,6 +22,7 @@ This file records defaults for implementation agents. Human answers override the
 | MCP server timing | Fast follow after CLI stabilizes | Keep canonical semantics in CLI/runtime first |
 | Permission model | Role files + validators first | OS/path enforcement can follow |
 | Sync conflict handling | MVP-critical detection and safe write discipline | Obsidian sync and multi-agent writes can race; use append-only child proposals, parent pull-up, leases, hashes, and conflict reports |
+| Operation automation policy | Low-noise defaults in `policies/operations.yaml` | Deployments can start with observed invalidation, manual promotion/watchdog/import sync, and threshold compaction, then tighten automation by policy |
 | Repository strategy | Dedicated repo, location provided at implementation time | Plan should use relative paths and not assume final GitHub location |
 
 ## Python vs TypeScript Notes
@@ -71,6 +72,6 @@ MVP strategy:
 - Generated artifacts must be rebuildable.
 - Mutating commands must create operation records.
 - Shared-memory publication must go through proposals and authority checks.
-- Context-affecting changes must create invalidations and dirty markers.
+- Context-affecting changes must be evaluated and recorded through operation policy; dirty markers are emitted by manual command or stricter policy.
 - Upgrades and migrations must be dry-runnable and non-clobbering.
 - Child nodes and agents propose upward; parent rollups pull from children through reviewable jobs rather than accepting direct child writes to parent published memory.

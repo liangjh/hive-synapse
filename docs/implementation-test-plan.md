@@ -346,10 +346,10 @@ Success criteria:
 
 Tests:
 
-- Parent update dirties descendants.
-- Edge update dirties connected node packs.
-- Runtime/schema/policy version change dirties referencing packs.
-- Dormant agent sees dirty marker on next context status check.
+- Parent update records impact and dirties descendants when policy requires dirty markers.
+- Edge update records impact and dirties connected node packs when policy requires dirty markers.
+- Runtime/schema/policy version change dirties referencing packs under strict safety policy.
+- Dormant agent sees emitted dirty markers on next context status check.
 - Stale sign-in cannot perform shared write.
 
 Success criteria:
@@ -365,7 +365,7 @@ Tests:
 - Candidate can be proposed to department.
 - Steward role can apply proposal.
 - Unauthorized actor cannot apply proposal.
-- Apply updates current memory and invalidates impacted packs.
+- Apply updates current memory and records policy-governed invalidation impact.
 - Rejection remains auditable.
 
 Success criteria:
@@ -452,7 +452,7 @@ Success criteria:
 Tests:
 
 - Node create creates graph record, folders, current/history files, import workspace, policy defaults.
-- Node move updates parent chain and invalidates impacted packs.
+- Node move updates parent chain and records policy-governed invalidation impact.
 - Node archive requires final compaction or deferral.
 - Node restore preserves history.
 

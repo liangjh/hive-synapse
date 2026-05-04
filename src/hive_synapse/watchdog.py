@@ -8,11 +8,15 @@ from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
 from .jobs import enqueue_job
 from .paths import WorkspacePaths
+from .policies import operation_policy
 
 
-def watchdog_report(root: Path, *, enqueue: bool = False, actor: str = "system:watchdog") -> dict[str, Any]:
+def watchdog_report(root: Path, *, enqueue: bool | None = None, actor: str = "system:watchdog") -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
+    policy = operation_policy(paths, "watchdog")
+    if enqueue is None:
+        enqueue = bool(policy.get("enqueue_remediation", False))
     findings: list[dict[str, Any]] = []
     dirty = sorted(paths.context_dirty.glob("*.yaml"))
     pending_text = "\n".join(path.read_text(encoding="utf-8", errors="ignore") for path in (paths.root / "memory" / "jobs" / "pending").glob("*.yaml"))
@@ -37,7 +41,17 @@ def watchdog_report(root: Path, *, enqueue: bool = False, actor: str = "system:w
         if data.get("state") in {"dropped", "classified"}:
             findings.append({"code": "unprocessed_import", "target": data.get("target"), "path": str(item.relative_to(paths.root))})
     report_id = new_id("watchdog")
-    report = {"ok": True, "id": report_id, "created_at": utc_now_iso(), "findings": findings, "finding_count": len(findings)}
+    report = {
+        "ok": True,
+        "id": report_id,
+        "created_at": utc_now_iso(),
+        "findings": findings,
+        "finding_count": len(findings),
+        "policy": {
+            "mode": policy.get("mode", "report_only"),
+            "enqueue_remediation": enqueue,
+        },
+    }
     report_path = paths.root / "memory" / "audit" / f"{report_id}.yaml"
     atomic_write_text(report_path, yaml.safe_dump(report, sort_keys=False))
     markdown_path = paths.root / "memory" / "audit" / f"{report_id}.md"

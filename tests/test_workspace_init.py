@@ -41,6 +41,7 @@ class WorkspaceInitTests(unittest.TestCase):
                 "memory/jobs/pending/job_demo_node_compact_001.yaml",
                 "memory/state/context-dirty/ctxinv_demo_001.yaml",
                 "memory/audit/archive_demo_001.yaml",
+                "policies/operations.yaml",
                 "org/assignments/assignment_codex_engineering_001.yaml",
                 "org/signins/signin_demo_001.yaml",
             ]

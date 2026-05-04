@@ -10,6 +10,7 @@ from .ids import new_id, utc_now_iso
 from .models import WorkspaceConfig
 from .operations import OperationLog
 from .paths import REQUIRED_DIRS, WorkspacePaths, target_to_path_fragment
+from .policies import ensure_operation_policy
 
 
 def create_workspace(root: Path, *, fixture: str | None = None, force: bool = False) -> WorkspacePaths:
@@ -34,6 +35,7 @@ def create_workspace(root: Path, *, fixture: str | None = None, force: bool = Fa
             budget_path,
             yaml.safe_dump({"id": "context_budget_default", "budget_tokens": 24000, "warn_at_ratio": 0.8, "on_over_budget": "create_compaction_job"}, sort_keys=False),
         )
+    operation_policy_path = ensure_operation_policy(paths, force=force)
 
     if fixture:
         if fixture != "basic-org":
@@ -45,7 +47,11 @@ def create_workspace(root: Path, *, fixture: str | None = None, force: bool = Fa
         actor="system:init",
         targets=[str(root)],
         command="hive init",
-        changed_files=[{"path": str(paths.config.relative_to(root))}],
+        changed_files=[
+            {"path": str(paths.config.relative_to(root))},
+            {"path": str(budget_path.relative_to(root))},
+            {"path": str(operation_policy_path.relative_to(root))},
+        ],
         rollback={"supported": False, "strategy": "backup_restore"},
     )
     return paths

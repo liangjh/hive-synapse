@@ -26,7 +26,7 @@ The MVP runtime has no required third-party dependencies. If you do not use `uv`
 ./bin/hive --help
 ```
 
-The current CLI supports workspace initialization, validation, context compilation/invalidation, imports, promotion review, jobs, lifecycle operations, skills, archives, upgrades, connector registries, persistence registries, and the MCP-compatible tool surface. See `docs/command-reference.md` for the full command list.
+The current CLI supports workspace initialization, validation, context compilation/invalidation, imports, promotion review, jobs, lifecycle operations, skills, archives, upgrades, operation policy inspection, connector registries, persistence registries, and the MCP-compatible tool surface. See `docs/command-reference.md` for the full command list.
 
 ## 3. Create a Demo Workspace
 
@@ -60,6 +60,14 @@ local-overrides/
 ```
 
 Runtime-owned code and templates stay in this repository. The workspace owns local organization context.
+
+Inspect automation defaults:
+
+```bash
+./bin/hive policy show --workspace /tmp/hive-demo
+```
+
+Fresh workspaces start with low-noise operation policy in `policies/operations.yaml`: automatic context invalidation is observed but does not create new dirty markers, promotion sweeps are manual, watchdogs report only, and import sync is manual.
 
 ## 4. Validate the Workspace
 
@@ -117,6 +125,8 @@ Imports preserve raw source material under `memory/raw/` and create candidate me
 
 Dirty markers persist for dormant agents and should be checked at sign-in or before shared writes.
 
+Manual `hive context invalidate` writes a dirty marker. Add `--respect-policy` when you want the command to follow the same automatic policy used by lifecycle and promotion operations.
+
 
 ## 9. Review, Promote, and Automate
 
@@ -130,6 +140,8 @@ Dirty markers persist for dormant agents and should be checked at sign-in or bef
 ```
 
 Promotion is conservative by default. Sweeps can create proposals, but publishing requires an approved proposal and an authorized actor.
+
+Automatic side effects are policy-driven. With the default policy, applying a promotion updates memory and records an invalidation observation without creating a new dirty marker. Set `context_invalidation.mode: strict` in `policies/operations.yaml` when promotion and lifecycle changes should dirty affected context automatically.
 
 
 ## 10. Lifecycle, Skills, and Upgrades

@@ -32,10 +32,11 @@ Hive Synapse organizes agent memory like infrastructure: raw sources are preserv
 | Promotion workflow | `hive promote list\|review\|apply\|reject\|sweep` routes candidates through explicit review. | Agent-written observations cannot silently become shared organizational truth. |
 | Current and historical memory | Workspaces include `CURRENT.md`, `HISTORY.md`, archive records, deprecated state, and operation history. | Agents can distinguish what is true now from what was true during prior decisions. |
 | Longitudinal values and drift | The design tracks conflicts, drift, supersession, archives, and future temporal graph projections. | Agents can reason about changing practices instead of flattening history into one stale summary. |
-| Freshness and invalidation | `hive context impacted\|invalidate\|status` writes dirty markers for affected targets. | Active or future agents can detect stale context before shared writes or promotion decisions. |
+| Freshness and invalidation | `hive context impacted\|invalidate\|status` computes impact and writes dirty markers when policy or an explicit command requests them. | Active or future agents can detect stale context without forcing every automated change to invalidate memory. |
 | Agent assignment and sign-in | Workspace records map actors to home nodes, roles, personal memory homes, sign-ins, and loaded context. | Each agent run has an operating contract: who it is, where it belongs, and what context it loaded. |
 | Guardrails and validation | `hive validate` checks required layout, graph records, memory records, source references, and duplicate IDs. | Memory safety is enforced by deterministic checks, not only by prompt instructions. |
-| Jobs and watchdogs | `hive job` commands enqueue, claim, run, complete, fail, and watchdog memory work. | Maintenance work such as rebuilds, imports, stale packs, and deferred review can be tracked explicitly. |
+| Jobs and watchdogs | `hive job` commands enqueue, claim, run, complete, fail, and watchdog memory work, with remediation controlled by operation policy. | Maintenance work such as rebuilds, imports, stale packs, and deferred review can be tracked explicitly. |
+| Operation policy | `policies/operations.yaml` and `hive policy show` control invalidation, compaction, promotion sweeps, watchdogs, import sync, and archive defaults. | Deployments can start conservative and turn on stricter automation only when memory growth or workflow needs justify it. |
 | Rollback and audit | Mutating commands append operation records; backups and `hive rollback preview` support guarded recovery. | Bad imports, promotions, compactions, or lifecycle operations can be inspected before reversal. |
 | Lifecycle and archive | `hive node`, `hive actor`, `hive archive`, and related commands move entities out of active context while preserving history. | Retired agents, obsolete projects, and inactive teams do not pollute startup context. |
 | Shared skills | `hive skill register\|list\|status` models reusable skills at scoped locations. | Agent capabilities can be governed alongside memory instead of living as untracked local prompts. |
@@ -61,6 +62,7 @@ hive init -> hive validate -> hive context compile, with repository safety, back
 printf "# Launch Notes\n\nCurrent project practice." > /tmp/launch-notes.md
 uv run hive import add departments/engineering /tmp/launch-notes.md --workspace /tmp/hive-demo
 uv run hive promote sweep --workspace /tmp/hive-demo --create-proposals
+uv run hive policy show --workspace /tmp/hive-demo
 uv run hive job watchdog --workspace /tmp/hive-demo
 uv run hive upgrade doctor --workspace /tmp/hive-demo
 ```
@@ -75,6 +77,7 @@ See [`docs/getting-started.md`](docs/getting-started.md) for the detailed guide.
 - [`docs/concurrency-sync.md`](docs/concurrency-sync.md): Markdown/Obsidian concurrency strategy.
 - [`docs/distribution-upgrade.md`](docs/distribution-upgrade.md): runtime/workspace separation and non-clobbering upgrades.
 - [`docs/command-reference.md`](docs/command-reference.md): CLI command reference.
+- [`docs/operation-policy.md`](docs/operation-policy.md): configurable automation defaults.
 - [`docs/workspace-layout.md`](docs/workspace-layout.md): workspace storage model.
 - [`docs/agent-onboarding.md`](docs/agent-onboarding.md): agent boot sequence and guardrails.
 - [`docs/mcp.md`](docs/mcp.md): MCP-compatible tool surface and adapter notes.

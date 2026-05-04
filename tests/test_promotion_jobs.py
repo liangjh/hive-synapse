@@ -9,10 +9,11 @@ from tests.support import run_hive
 
 
 class PromotionJobTests(unittest.TestCase):
-    def test_promote_review_apply_updates_current_and_invalidates(self) -> None:
+    def test_promote_review_apply_updates_current_and_observes_policy(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
             self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            dirty_before = set((workspace / "memory/state/context-dirty").glob("ctxinv_*.yaml"))
             proposal_id = "promotion_demo_001"
             review = run_hive(
                 "promote",
@@ -44,7 +45,9 @@ class PromotionJobTests(unittest.TestCase):
             self.assertTrue(Path(payload["published_path"]).exists())
             current = workspace / "memory/records/nodes/departments/engineering/CURRENT.md"
             self.assertIn("Published Memory: mem_demo_engineering_practice_001", current.read_text())
-            self.assertTrue(list((workspace / "memory/state/context-dirty").glob("ctxinv_*.yaml")))
+            self.assertIsNone(payload["invalidation"])
+            dirty_after = set((workspace / "memory/state/context-dirty").glob("ctxinv_*.yaml"))
+            self.assertEqual(dirty_after, dirty_before)
             validate = run_hive("validate", str(workspace), "--json")
             self.assertEqual(validate.returncode, 0, validate.stdout + validate.stderr)
 

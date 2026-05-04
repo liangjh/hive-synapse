@@ -159,7 +159,8 @@ def run_next_job(root: Path, *, runner: str = "runner:local") -> dict[str, Any]:
             pack, manifest = compile_context_pack(root, target)
             result = {"pack": str(pack), "manifest": str(manifest)}
         elif job_type == "promotion_sweep":
-            result = sweep_promotability(root, create_proposals=bool(job.get("inputs", {}).get("create_proposals")), actor=runner)
+            create_proposals = job.get("inputs", {}).get("create_proposals")
+            result = sweep_promotability(root, create_proposals=create_proposals, actor=runner)
         elif job_type in {"node_compact", "edge_compact", "archive_sweep", "active_signin_refresh_check"}:
             result = {"status": "no_changes", "handler": job_type}
         else:

@@ -22,7 +22,7 @@ class PackageCliSmokeTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Hive Synapse memory runtime", result.stdout)
-        for command in ["init", "validate", "context", "operation", "upgrade"]:
+        for command in ["init", "validate", "context", "policy", "operation", "upgrade"]:
             self.assertIn(command, result.stdout)
 
     def test_context_help_lists_compile_command(self) -> None:

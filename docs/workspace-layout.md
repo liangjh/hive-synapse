@@ -10,9 +10,10 @@ Important roots:
 - `memory/raw/` preserves raw evidence as append-only artifacts.
 - `memory/proposals/` stores promotion proposals.
 - `memory/jobs/` stores pending, claimed, completed, and failed jobs.
-- `memory/state/context-dirty/` stores invalidations that force refresh.
+- `memory/state/context-dirty/` stores dirty markers created by manual invalidation or stricter operation policy.
 - `memory/generated/` stores rebuildable context packs and indexes.
 - `org/assignments/` maps actors to home nodes and roles.
-- `policies/` stores tunable operating policy.
+- `policies/operations.yaml` stores workspace automation defaults for invalidation, compaction, promotion, watchdogs, import sync, and archive behavior.
+- `policies/nodes/` stores target-specific overrides.
 
 Generated artifacts are rebuildable and should not be treated as source of truth.

@@ -11,6 +11,7 @@ from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
 from .operations import OperationLog
 from .paths import WorkspacePaths, target_to_path_fragment
+from .policies import operation_policy
 
 AUTHORIZED_REVIEW_PREFIXES = ("steward:", "human:admin", "system:")
 
@@ -163,6 +164,7 @@ def apply_proposal(root: Path, proposal_id: str, *, actor: str) -> dict[str, Any
         "published_path": str(output_path),
         "current_path": str(current_path),
         "invalidation": invalidation["invalidation"],
+        "context_invalidation": invalidation,
         "operation": operation.id,
     }
 
@@ -171,9 +173,12 @@ def reject_proposal(root: Path, proposal_id: str, *, actor: str, rationale: str)
     return review_proposal(root, proposal_id, decision="rejected", actor=actor, rationale=rationale)
 
 
-def sweep_promotability(root: Path, *, create_proposals: bool = False, actor: str = "system:sweep") -> dict[str, Any]:
+def sweep_promotability(root: Path, *, create_proposals: bool | None = None, actor: str = "system:sweep") -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
+    policy = operation_policy(paths, "promotion")
+    if create_proposals is None:
+        create_proposals = bool(policy.get("create_proposals_by_default", False))
     promotable = []
     needs_more_evidence = []
     conflicts_detected = []
@@ -234,6 +239,10 @@ def sweep_promotability(root: Path, *, create_proposals: bool = False, actor: st
         "conflicts_detected": conflicts_detected,
         "not_promotable": not_promotable,
         "created_proposals": created,
+        "policy": {
+            "sweep_mode": policy.get("sweep_mode", "manual"),
+            "create_proposals": create_proposals,
+        },
     }
     report_id = new_id("promotability")
     report_path = paths.root / "memory" / "audit" / f"{report_id}.yaml"

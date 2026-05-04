@@ -79,7 +79,7 @@ Third working slice:
 ```text
 hive context invalidate
   -> computes impacted descendants/edges/agents
-  -> writes dirty markers
+  -> writes dirty markers for manual invalidation or strict policy
   -> rebuilds affected context pack
   -> forces next-run refresh
 ```
@@ -482,7 +482,7 @@ Requirements:
 - Read context budget policy.
 - Estimate tokens approximately.
 - Enforce hard limits.
-- Create pruning/compaction job when over threshold.
+- Create pruning/compaction job when over threshold and operation policy allows it.
 
 Success criteria:
 
@@ -497,14 +497,14 @@ Dependencies: T17.
 Requirements:
 
 - `hive context impacted <target>` computes affected descendants, edges, graph neighbors, actors, sign-ins, packs, and skill manifests.
-- `hive context invalidate <target>` writes invalidation events and dirty markers.
-- Dirty markers persist for dormant agents.
+- `hive context invalidate <target>` writes dirty markers for manual invalidation; automatic callers respect operation policy.
+- Dirty markers persist for dormant agents when emitted.
 
 Success criteria:
 
-- Parent update dirties descendants.
-- Edge update dirties connected node packs.
-- Runtime/schema version change dirties packs referencing old versions.
+- Parent update records impact and dirties descendants when policy requires dirty markers.
+- Edge update records impact and dirties connected node packs when policy requires dirty markers.
+- Runtime/schema version change dirties packs referencing old versions under strict safety policy.
 - `hive context status` blocks stale sign-in from shared write.
 
 Dependencies: T16, T17, T10.
@@ -518,13 +518,13 @@ Requirements:
 - Create, list, review, approve, reject, and apply promotion proposals.
 - Enforce authority transitions.
 - Require source refs.
-- Emit operation records and invalidations on apply.
+- Emit operation records and policy-governed invalidation observations on apply.
 
 Success criteria:
 
 - Candidate can be proposed to department.
 - Department proposal can be applied only by steward role.
-- Applied proposal updates current memory and invalidates impacted packs.
+- Applied proposal updates current memory and invalidates impacted packs when operation policy requires dirty markers.
 - Rejected proposal remains auditable.
 
 Dependencies: T07, T10, T19.
@@ -876,7 +876,7 @@ Join point:
 
 Join point:
 
-- Promotion apply invalidates impacted packs and job runner can process remediation.
+- Promotion apply records impacted packs, and policy/job runner can process remediation.
 
 ### Wave 5: Lifecycle and Upgrade
 

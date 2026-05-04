@@ -23,6 +23,7 @@ from .upgrade import doctor, list_migrations, migration_apply, migration_dry_run
 from .watchdog import watchdog_report
 from .paths import WorkspacePaths
 from .persistence import list_backends
+from .policies import explain_operation_policy
 from .workspace import create_workspace
 from .validator import validate_workspace
 
@@ -109,11 +110,21 @@ def _cmd_context_impacted(args: argparse.Namespace) -> int:
 
 
 def _cmd_context_invalidate(args: argparse.Namespace) -> int:
-    result = invalidate_context(Path(args.workspace), args.target, reason=args.reason, actor=args.actor)
+    result = invalidate_context(
+        Path(args.workspace),
+        args.target,
+        reason=args.reason,
+        actor=args.actor,
+        respect_policy=args.respect_policy,
+    )
     if args.json:
         _print_json(result)
     else:
-        print(f"Invalidated context for {args.target}: {result['invalidation']['id']}")
+        if result.get("invalidation"):
+            print(f"Invalidated context for {args.target}: {result['invalidation']['id']}")
+        else:
+            policy = result.get("policy", {})
+            print(f"Observed context change for {args.target}: {policy.get('decision', 'policy')}")
     return 0
 
 
@@ -465,6 +476,22 @@ def _cmd_persistence_list(args: argparse.Namespace) -> int:
             print(f"{backend['name']} ({marker}): {backend['description']}")
     return 0
 
+
+def _cmd_policy_show(args: argparse.Namespace) -> int:
+    result = explain_operation_policy(Path(args.workspace), target=args.target)
+    if args.json:
+        _print_json(result)
+    else:
+        policy = result["policy"]
+        print(f"Operation policy: {result['path']}")
+        print(f"Policy id: {policy.get('id')}")
+        for name, settings in policy.get("operation_policies", {}).items():
+            if isinstance(settings, dict):
+                mode = settings.get("mode", settings.get("sweep_mode", "configured"))
+                print(f"{name}: {mode}")
+    return 0
+
+
 def _cmd_mcp_tools(args: argparse.Namespace) -> int:
     result = list_tools()
     if args.json:
@@ -568,6 +595,11 @@ def build_parser() -> argparse.ArgumentParser:
     invalidate_parser.add_argument("--workspace", default=".")
     invalidate_parser.add_argument("--reason", required=True)
     invalidate_parser.add_argument("--actor", default="system:context")
+    invalidate_parser.add_argument(
+        "--respect-policy",
+        action="store_true",
+        help="Evaluate operations policy instead of forcing a dirty marker.",
+    )
     invalidate_parser.add_argument("--json", action="store_true")
     invalidate_parser.set_defaults(func=_cmd_context_invalidate)
 
@@ -646,7 +678,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     promote_sweep = promote_subparsers.add_parser("sweep", help="Sweep candidates for promotability")
     promote_sweep.add_argument("--workspace", default=".")
-    promote_sweep.add_argument("--create-proposals", action="store_true")
+    promote_sweep.add_argument("--create-proposals", action="store_true", default=None)
     promote_sweep.add_argument("--actor", default="system:sweep")
     promote_sweep.add_argument("--json", action="store_true")
     promote_sweep.set_defaults(func=_cmd_promote_sweep)
@@ -697,7 +729,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     job_watchdog = job_subparsers.add_parser("watchdog", help="Run watchdog checks")
     job_watchdog.add_argument("--workspace", default=".")
-    job_watchdog.add_argument("--enqueue", action="store_true")
+    job_watchdog.add_argument("--enqueue", action="store_true", default=None)
     job_watchdog.add_argument("--actor", default="system:watchdog")
     job_watchdog.add_argument("--json", action="store_true")
     job_watchdog.set_defaults(func=_cmd_job_watchdog)
@@ -790,7 +822,7 @@ def build_parser() -> argparse.ArgumentParser:
     archive_subparsers = archive_parser.add_subparsers(dest="archive_command", required=True)
     archive_sweep_cmd = archive_subparsers.add_parser("sweep", help="Find archive candidates")
     archive_sweep_cmd.add_argument("--workspace", default=".")
-    archive_sweep_cmd.add_argument("--enqueue", action="store_true")
+    archive_sweep_cmd.add_argument("--enqueue", action="store_true", default=None)
     archive_sweep_cmd.add_argument("--actor", default="system:archive")
     archive_sweep_cmd.add_argument("--json", action="store_true")
     archive_sweep_cmd.set_defaults(func=_cmd_archive_sweep)
@@ -843,6 +875,14 @@ def build_parser() -> argparse.ArgumentParser:
     persistence_list = persistence_subparsers.add_parser("list", help="List persistence backends")
     persistence_list.add_argument("--json", action="store_true")
     persistence_list.set_defaults(func=_cmd_persistence_list)
+
+    policy_parser = subparsers.add_parser("policy", help="Inspect effective operation policy")
+    policy_subparsers = policy_parser.add_subparsers(dest="policy_command", required=True)
+    policy_show = policy_subparsers.add_parser("show", help="Show workspace or target operation policy")
+    policy_show.add_argument("--workspace", default=".")
+    policy_show.add_argument("--target")
+    policy_show.add_argument("--json", action="store_true")
+    policy_show.set_defaults(func=_cmd_policy_show)
 
     mcp_parser = subparsers.add_parser("mcp", help="MCP-compatible tool surface")
     mcp_subparsers = mcp_parser.add_subparsers(dest="mcp_command", required=True)

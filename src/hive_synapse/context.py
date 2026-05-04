@@ -10,6 +10,7 @@ from .ids import new_id, utc_now_iso
 from .models import ContextPackManifest
 from .operations import OperationLog
 from .paths import WorkspacePaths, target_to_path_fragment
+from .policies import context_invalidation_decision, operation_policy
 
 
 def _read_if_exists(path: Path) -> str:
@@ -84,21 +85,34 @@ def compile_context_pack(root: Path, target: str) -> tuple[Path, Path]:
 
     estimated_tokens = max(1, len(pack.split()))
     budget = _load_budget(paths)
+    compaction_policy = operation_policy(paths, "compaction", target=target)
     budget_tokens = int(budget.get("budget_tokens", 24000))
+    on_over_budget = str(
+        compaction_policy.get("on_over_budget")
+        or budget.get("on_over_budget", "create_compaction_job")
+    )
+    compaction_mode = str(compaction_policy.get("mode", "threshold")).lower()
     validation = {"status": "warning" if dirty_warnings else "passed", "errors": [], "warnings": dirty_warnings}
     if estimated_tokens > budget_tokens:
         validation = {"status": "over_budget", "errors": [], "warnings": ["context_over_budget"]}
-        job_id = new_id("job")
-        job = {
-            "id": job_id,
-            "type": "node_compact",
-            "target": target,
-            "status": "pending",
-            "reason": "Context pack exceeded token budget.",
-            "created_at": utc_now_iso(),
-            "inputs": {"estimated_tokens": estimated_tokens, "budget_tokens": budget_tokens},
-        }
-        atomic_write_text(paths.root / "memory" / "jobs" / "pending" / f"{job_id}.yaml", yaml.safe_dump(job, sort_keys=False))
+        if compaction_mode in {"threshold", "auto", "automatic"} and on_over_budget == "create_compaction_job":
+            job_id = new_id("job")
+            job = {
+                "id": job_id,
+                "type": "node_compact",
+                "target": target,
+                "status": "pending",
+                "reason": "Context pack exceeded token budget.",
+                "created_at": utc_now_iso(),
+                "inputs": {"estimated_tokens": estimated_tokens, "budget_tokens": budget_tokens},
+            }
+            atomic_write_text(
+                paths.root / "memory" / "jobs" / "pending" / f"{job_id}.yaml",
+                yaml.safe_dump(job, sort_keys=False),
+            )
+            validation["warnings"].append("compaction_job_created")
+        else:
+            validation["warnings"].append(f"compaction_policy:{compaction_mode}")
 
     manifest = ContextPackManifest(
         id=f"context_pack_{target.replace('/', '_')}_001",
@@ -135,10 +149,23 @@ def context_impact(root: Path, target: str) -> dict[str, Any]:
     return {"ok": True, **MemoryGraph(paths.root).impact(target).as_dict()}
 
 
-def invalidate_context(root: Path, target: str, *, reason: str, actor: str = "system:context") -> dict[str, Any]:
+def invalidate_context(
+    root: Path,
+    target: str,
+    *,
+    reason: str,
+    actor: str = "system:context",
+    respect_policy: bool = True,
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     impact = MemoryGraph(paths.root).impact(target)
+    decision = context_invalidation_decision(
+        paths,
+        target=target,
+        reason=reason,
+        respect_policy=respect_policy,
+    )
     invalidation_id = new_id("ctxinv")
     record = {
         "id": invalidation_id,
@@ -148,17 +175,32 @@ def invalidate_context(root: Path, target: str, *, reason: str, actor: str = "sy
         "severity": "normal",
         "affected_context_packs": impact.context_packs,
         "affected_targets": impact.affected_targets,
-        "status": "open",
+        "status": "open" if decision["emit_dirty_marker"] else "observed",
+        "policy_mode": decision["mode"],
+        "policy_decision": decision["decision"],
     }
     path = paths.context_dirty / f"{invalidation_id}.yaml"
-    atomic_write_text(path, yaml.safe_dump(record, sort_keys=False))
+    changed_files: list[dict[str, Any]] = []
+    if decision["emit_dirty_marker"]:
+        atomic_write_text(path, yaml.safe_dump(record, sort_keys=False))
+        changed_files.append({"path": str(path.relative_to(paths.root))})
     operation = OperationLog(paths).append(
         operation_type="context_invalidate",
         actor=actor,
         targets=[str(paths.root), target, *impact.affected_targets],
         command="hive context invalidate",
-        changed_files=[{"path": str(path.relative_to(paths.root))}],
-        changed_records=[{"id": invalidation_id, "type": "context_invalidation"}],
-        rollback={"supported": True, "strategy": "close_dirty_marker"},
+        changed_files=changed_files,
+        changed_records=[{"id": invalidation_id, "type": "context_invalidation", "status": record["status"]}],
+        rollback={
+            "supported": bool(changed_files),
+            "strategy": "close_dirty_marker" if changed_files else "report_only",
+        },
     )
-    return {"ok": True, "invalidation": record, "impact": impact.as_dict(), "operation": operation.id}
+    return {
+        "ok": True,
+        "invalidation": record if changed_files else None,
+        "observation": record,
+        "impact": impact.as_dict(),
+        "operation": operation.id,
+        "policy": decision,
+    }

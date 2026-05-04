@@ -59,7 +59,18 @@ def create_node(root: Path, node_id: str, *, kind: str, title: str, parents: lis
     atomic_write_text(memory_dir / "HISTORY.md", f"# Historical Memory: {title}\n\nHistorical context for `{node_id}`.\n")
     import_workspace = _write_import_workspace(paths, node_id)
     policy_path = paths.root / "policies" / "nodes" / target_to_path_fragment(node_id).with_suffix(".yaml")
-    atomic_write_text(policy_path, yaml.safe_dump({"id": f"policy_{node_id.replace('/', '_')}", "target": node_id, "created_at": utc_now_iso()}, sort_keys=False))
+    atomic_write_text(
+        policy_path,
+        yaml.safe_dump(
+            {
+                "id": f"policy_{node_id.replace('/', '_')}",
+                "target": node_id,
+                "created_at": utc_now_iso(),
+                "operation_policies": {},
+            },
+            sort_keys=False,
+        ),
+    )
     for parent in parents:
         invalidate_context(paths.root, parent, reason=f"node_created:{node_id}", actor=actor)
     op = OperationLog(paths).append(
