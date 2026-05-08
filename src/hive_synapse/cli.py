@@ -8,6 +8,7 @@ from typing import Any
 
 from . import __version__
 from .backup import create_backup, rollback_preview
+from .charters import ensure_charter, list_charters, read_charter, update_charter
 from .connectors import list_connectors
 from .context import compile_context_pack, context_impact, invalidate_context
 from .errors import HiveError
@@ -190,6 +191,55 @@ def _cmd_validate(args: argparse.Namespace) -> int:
             print(f"WARNING {issue.code}: {issue.message}{location}", file=sys.stderr)
     return 0 if report.ok else 1
 
+
+
+def _cmd_charter_init(args: argparse.Namespace) -> int:
+    result = ensure_charter(Path(args.workspace), args.target, actor=args.actor, title=args.title)
+    if args.json:
+        _print_json(result)
+    else:
+        action = "Created" if result.get("created") else "Found"
+        print(f"{action} charter: {result['path']}")
+    return 0
+
+
+def _cmd_charter_show(args: argparse.Namespace) -> int:
+    result = read_charter(Path(args.workspace), args.target)
+    if args.json:
+        _print_json(result)
+    else:
+        if not result.get("ok"):
+            print(result.get("error", "charter error"), file=sys.stderr)
+            return 1
+        print(result["body"].rstrip())
+    return 0 if result.get("ok") else 1
+
+
+def _cmd_charter_list(args: argparse.Namespace) -> int:
+    result = list_charters(Path(args.workspace))
+    if args.json:
+        _print_json(result)
+    else:
+        for charter in result["charters"]:
+            print(f"{charter.get('node')} {charter.get('path')}")
+    return 0
+
+
+def _cmd_charter_update(args: argparse.Namespace) -> int:
+    result = update_charter(
+        Path(args.workspace),
+        args.target,
+        section=args.section,
+        text=args.text,
+        mode=args.mode,
+        actor=args.actor,
+        source_ref=args.source_ref,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Updated charter {args.target}: {args.section}")
+    return 0
 
 def _cmd_context_compile(args: argparse.Namespace) -> int:
     pack_path, manifest_path = compile_context_pack(Path(args.workspace), args.target)
@@ -784,6 +834,38 @@ def build_parser() -> argparse.ArgumentParser:
     llm_profile_assign.add_argument("--enable", action="store_true")
     llm_profile_assign.add_argument("--json", action="store_true")
     llm_profile_assign.set_defaults(func=_cmd_llm_profile_assign)
+
+    charter_parser = subparsers.add_parser("charter", help="Mission, goals, tone, and soul records")
+    charter_subparsers = charter_parser.add_subparsers(dest="charter_command", required=True)
+    charter_init = charter_subparsers.add_parser("init", help="Create a node charter if missing")
+    charter_init.add_argument("target")
+    charter_init.add_argument("--workspace", default=".")
+    charter_init.add_argument("--title")
+    charter_init.add_argument("--actor", required=True)
+    charter_init.add_argument("--json", action="store_true")
+    charter_init.set_defaults(func=_cmd_charter_init)
+
+    charter_show = charter_subparsers.add_parser("show", help="Show a node charter")
+    charter_show.add_argument("target")
+    charter_show.add_argument("--workspace", default=".")
+    charter_show.add_argument("--json", action="store_true")
+    charter_show.set_defaults(func=_cmd_charter_show)
+
+    charter_list = charter_subparsers.add_parser("list", help="List node charters")
+    charter_list.add_argument("--workspace", default=".")
+    charter_list.add_argument("--json", action="store_true")
+    charter_list.set_defaults(func=_cmd_charter_list)
+
+    charter_update = charter_subparsers.add_parser("update", help="Append or replace a charter section")
+    charter_update.add_argument("target")
+    charter_update.add_argument("--workspace", default=".")
+    charter_update.add_argument("--section", choices=["mission", "goals", "tone", "soul", "principles", "notes"], required=True)
+    charter_update.add_argument("--text", required=True)
+    charter_update.add_argument("--mode", choices=["append", "replace"], default="append")
+    charter_update.add_argument("--actor", required=True)
+    charter_update.add_argument("--source-ref")
+    charter_update.add_argument("--json", action="store_true")
+    charter_update.set_defaults(func=_cmd_charter_update)
 
     context_parser = subparsers.add_parser("context", help="Context pack operations")
     context_subparsers = context_parser.add_subparsers(dest="context_command", required=True)

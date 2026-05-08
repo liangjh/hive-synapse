@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from . import simple_yaml as yaml
+from .charters import default_charter_body
 
 from .frontmatter import dump_markdown
 from .fs import atomic_write_text
@@ -75,6 +76,36 @@ def _write_if_allowed(path: Path, text: str, *, force: bool) -> None:
     atomic_write_text(path, text)
 
 
+def _write_node_charter(paths: WorkspacePaths, node: dict, *, now: str, force: bool) -> None:
+    charter = {
+        "id": f"charter_{node['id'].replace('/', '_')}",
+        "type": "charter",
+        "scope": "node",
+        "node": node["id"],
+        "authority": "charter",
+        "status": "active",
+        "created_at": now,
+        "created_by": "fixture:basic-org",
+        "updated_at": now,
+        "updated_by": "fixture:basic-org",
+        "title": node["title"],
+        "sections": ["mission", "goals", "tone", "soul", "principles", "notes"],
+        "source_refs": [],
+        "tags": ["charter", "goals", "mission", "tone", "soul"],
+    }
+    mem_dir = _node_memory_dir(paths, node["id"])
+    _write_if_allowed(
+        mem_dir / "CHARTER.md",
+        dump_markdown(charter, default_charter_body(node["title"], node["id"])),
+        force=force,
+    )
+    _write_if_allowed(
+        mem_dir / "CHARTER_HISTORY.md",
+        f"# Charter History: {node['title']}\n\n## {now} — created by fixture:basic-org\n\nInitial fixture charter created.\n",
+        force=force,
+    )
+
+
 def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> None:
     now = utc_now_iso()
     nodes = [
@@ -139,6 +170,7 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
             f"# Historical Memory: {node['title']}\n\nHistorical context for `{node['id']}`.\n",
             force=force,
         )
+        _write_node_charter(paths, node, now=now, force=force)
 
     edge = {
         "id": "engineering__marketing__project-launch-x",

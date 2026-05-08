@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from . import simple_yaml as yaml
+from .charters import charter_path
 from .fs import atomic_write_text
 from .graph import MemoryGraph
 from .ids import new_id, utc_now_iso
@@ -17,6 +18,11 @@ def _read_if_exists(path: Path) -> str:
     if path.exists():
         return path.read_text(encoding="utf-8").strip()
     return ""
+
+
+def _charter_memory(paths: WorkspacePaths, target: str) -> tuple[str, Path]:
+    path = charter_path(paths, target)
+    return _read_if_exists(path), path
 
 
 def _current_memory(paths: WorkspacePaths, target: str) -> tuple[str, Path]:
@@ -59,9 +65,18 @@ def compile_context_pack(root: Path, target: str) -> tuple[Path, Path]:
     ]
 
     for parent in graph.parent_chain(target):
+        charter_text, charter_source = _charter_memory(paths, parent)
+        if charter_text:
+            body_parts.append(f"## Parent Charter: {parent}\n\n{charter_text}")
+            sections.append({"name": f"parent_charter:{parent}", "estimated_tokens": len(charter_text.split()), "source": str(charter_source.relative_to(paths.root))})
         text, path = _current_memory(paths, parent)
         body_parts.append(f"## Parent Context: {parent}\n\n{text or '_No current memory found._'}")
         sections.append({"name": f"parent:{parent}", "estimated_tokens": len(text.split()), "source": str(path.relative_to(paths.root))})
+
+    target_charter, target_charter_path = _charter_memory(paths, target)
+    if target_charter:
+        body_parts.append(f"## Target Charter\n\n{target_charter}")
+        sections.append({"name": "target_charter", "estimated_tokens": len(target_charter.split()), "source": str(target_charter_path.relative_to(paths.root))})
 
     target_text, target_path = _current_memory(paths, target)
     body_parts.append(f"## Target Context\n\n{target_text or '_No target current memory found._'}")

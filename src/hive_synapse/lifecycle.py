@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from . import simple_yaml as yaml
+from .charters import ensure_charter
 from .context import invalidate_context
 from .frontmatter import dump_markdown, read_markdown
 from .fs import atomic_write_text
@@ -57,6 +58,7 @@ def create_node(root: Path, node_id: str, *, kind: str, title: str, parents: lis
     memory_dir = _memory_dir(paths, node_id)
     atomic_write_text(memory_dir / "CURRENT.md", f"# Current Memory: {title}\n\nStartup context for `{node_id}`.\n")
     atomic_write_text(memory_dir / "HISTORY.md", f"# Historical Memory: {title}\n\nHistorical context for `{node_id}`.\n")
+    charter_result = ensure_charter(paths.root, node_id, actor=actor, title=title)
     import_workspace = _write_import_workspace(paths, node_id)
     policy_path = paths.root / "policies" / "nodes" / target_to_path_fragment(node_id).with_suffix(".yaml")
     atomic_write_text(
@@ -82,6 +84,7 @@ def create_node(root: Path, node_id: str, *, kind: str, title: str, parents: lis
             {"path": str(node_path.relative_to(paths.root))},
             {"path": str((memory_dir / "CURRENT.md").relative_to(paths.root))},
             {"path": str((memory_dir / "HISTORY.md").relative_to(paths.root))},
+            {"path": str(Path(charter_result["path"]).relative_to(paths.root))},
             {"path": str(import_workspace.relative_to(paths.root))},
             {"path": str(policy_path.relative_to(paths.root))},
         ],
