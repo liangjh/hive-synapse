@@ -30,8 +30,18 @@ def _current_memory(paths: WorkspacePaths, target: str) -> tuple[str, Path]:
     return _read_if_exists(path), path
 
 
+def _node_brief(paths: WorkspacePaths, target: str) -> tuple[str, Path]:
+    path = paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "BRIEF.md"
+    return _read_if_exists(path), path
+
+
 def _edge_memory(paths: WorkspacePaths, edge_id: str) -> tuple[str, Path]:
-    path = paths.root / "memory" / "records" / "edges" / edge_id / "CURRENT.md"
+    path = paths.root / "memory" / "records" / "edges" / target_to_path_fragment(edge_id) / "CURRENT.md"
+    return _read_if_exists(path), path
+
+
+def _edge_brief(paths: WorkspacePaths, edge_id: str) -> tuple[str, Path]:
+    path = paths.root / "memory" / "records" / "edges" / target_to_path_fragment(edge_id) / "BRIEF.md"
     return _read_if_exists(path), path
 
 
@@ -69,6 +79,10 @@ def compile_context_pack(root: Path, target: str) -> tuple[Path, Path]:
         if charter_text:
             body_parts.append(f"## Parent Charter: {parent}\n\n{charter_text}")
             sections.append({"name": f"parent_charter:{parent}", "estimated_tokens": len(charter_text.split()), "source": str(charter_source.relative_to(paths.root))})
+        brief_text, brief_path = _node_brief(paths, parent)
+        if brief_text:
+            body_parts.append(f"## Parent Brief: {parent}\n\n{brief_text}")
+            sections.append({"name": f"parent_brief:{parent}", "estimated_tokens": len(brief_text.split()), "source": str(brief_path.relative_to(paths.root))})
         text, path = _current_memory(paths, parent)
         body_parts.append(f"## Parent Context: {parent}\n\n{text or '_No current memory found._'}")
         sections.append({"name": f"parent:{parent}", "estimated_tokens": len(text.split()), "source": str(path.relative_to(paths.root))})
@@ -78,11 +92,20 @@ def compile_context_pack(root: Path, target: str) -> tuple[Path, Path]:
         body_parts.append(f"## Target Charter\n\n{target_charter}")
         sections.append({"name": "target_charter", "estimated_tokens": len(target_charter.split()), "source": str(target_charter_path.relative_to(paths.root))})
 
+    target_brief, target_brief_path = _node_brief(paths, target)
+    if target_brief:
+        body_parts.append(f"## Target Brief\n\n{target_brief}")
+        sections.append({"name": "target_brief", "estimated_tokens": len(target_brief.split()), "source": str(target_brief_path.relative_to(paths.root))})
+
     target_text, target_path = _current_memory(paths, target)
     body_parts.append(f"## Target Context\n\n{target_text or '_No target current memory found._'}")
     sections.append({"name": "target", "estimated_tokens": len(target_text.split()), "source": str(target_path.relative_to(paths.root))})
 
     for edge_id in graph.connected_edges(target):
+        edge_brief, edge_brief_path = _edge_brief(paths, edge_id)
+        if edge_brief:
+            body_parts.append(f"## Shared Edge Brief: {edge_id}\n\n{edge_brief}")
+            sections.append({"name": f"edge_brief:{edge_id}", "estimated_tokens": len(edge_brief.split()), "source": str(edge_brief_path.relative_to(paths.root))})
         text, path = _edge_memory(paths, edge_id)
         body_parts.append(f"## Shared Edge Context: {edge_id}\n\n{text or '_No edge current memory found._'}")
         sections.append({"name": f"edge:{edge_id}", "estimated_tokens": len(text.split()), "source": str(path.relative_to(paths.root))})

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from . import simple_yaml as yaml
+from .compaction import compact_edge, compact_node
 from .context import compile_context_pack
 from .ids import new_id, utc_now_iso
 from .imports import compact_import
@@ -161,7 +162,11 @@ def run_next_job(root: Path, *, runner: str = "runner:local") -> dict[str, Any]:
         elif job_type == "promotion_sweep":
             create_proposals = job.get("inputs", {}).get("create_proposals")
             result = sweep_promotability(root, create_proposals=create_proposals, actor=runner)
-        elif job_type in {"node_compact", "edge_compact", "archive_sweep", "active_signin_refresh_check"}:
+        elif job_type == "node_compact":
+            result = compact_node(root, target, actor=runner)
+        elif job_type == "edge_compact":
+            result = compact_edge(root, target, actor=runner)
+        elif job_type in {"archive_sweep", "active_signin_refresh_check"}:
             result = {"status": "no_changes", "handler": job_type}
         else:
             return fail_job(root, job_id, reason=f"No handler for job type {job_type}", actor=runner)

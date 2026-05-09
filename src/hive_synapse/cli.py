@@ -9,8 +9,10 @@ from typing import Any
 from . import __version__
 from .backup import create_backup, rollback_preview
 from .charters import ensure_charter, list_charters, read_charter, update_charter
+from .compaction import compact_edge, compact_node
 from .connectors import list_connectors
 from .context import compile_context_pack, context_impact, invalidate_context
+from .edges import archive_edge, create_edge as create_graph_edge, list_edges, restore_edge
 from .errors import HiveError
 from .guardrails import dirty_markers_for_target
 from .imports import add_import, classify_import, compact_import, fetch_import, propose_import
@@ -31,8 +33,10 @@ from .promotion import apply_proposal, list_proposals, reject_proposal, review_p
 from .skills import list_skills, register_skill, update_skill_status
 from .upgrade import doctor, list_migrations, migration_apply, migration_dry_run, template_apply_new, template_diff
 from .watchdog import watchdog_report
+from .operations import list_operations, show_operation
 from .paths import WorkspacePaths
 from .persistence import list_backends
+from .scheduler import install_scheduler
 from .policies import explain_operation_policy
 from .workspace import create_workspace
 from .validator import validate_workspace
@@ -538,6 +542,71 @@ def _cmd_node_restore(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_node_compact(args: argparse.Namespace) -> int:
+    result = compact_node(Path(args.workspace), args.node_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Compacted node: {args.node_id}")
+        print(result["brief"])
+    return 0
+
+
+def _cmd_edge_create(args: argparse.Namespace) -> int:
+    result = create_graph_edge(
+        Path(args.workspace),
+        args.edge_id,
+        kind=args.kind,
+        title=args.title,
+        nodes=args.node,
+        actor=args.actor,
+        summary=args.summary,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Created edge: {args.edge_id}")
+    return 0
+
+
+def _cmd_edge_list(args: argparse.Namespace) -> int:
+    result = list_edges(Path(args.workspace), node=args.node, include_archived=args.include_archived)
+    if args.json:
+        _print_json(result)
+    else:
+        for edge in result["edges"]:
+            print(f"{edge['id']} {edge.get('status')} {', '.join(edge.get('nodes', []))}")
+    return 0
+
+
+def _cmd_edge_archive(args: argparse.Namespace) -> int:
+    result = archive_edge(Path(args.workspace), args.edge_id, actor=args.actor, reason=args.reason)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Archived edge: {args.edge_id}")
+    return 0
+
+
+def _cmd_edge_restore(args: argparse.Namespace) -> int:
+    result = restore_edge(Path(args.workspace), args.edge_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Restored edge: {args.edge_id}")
+    return 0
+
+
+def _cmd_edge_compact(args: argparse.Namespace) -> int:
+    result = compact_edge(Path(args.workspace), args.edge_id, actor=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Compacted edge: {args.edge_id}")
+        print(result["brief"])
+    return 0
+
+
 def _cmd_actor_assign(args: argparse.Namespace) -> int:
     result = assign_actor(Path(args.workspace), args.actor_id, home_node=args.home_node, role=args.role, actor=args.actor)
     if args.json:
@@ -685,6 +754,53 @@ def _cmd_policy_show(args: argparse.Namespace) -> int:
                 mode = settings.get("mode", settings.get("sweep_mode", "configured"))
                 print(f"{name}: {mode}")
     return 0
+
+
+def _cmd_scheduler_install(args: argparse.Namespace) -> int:
+    result = install_scheduler(
+        Path(args.workspace),
+        args.kind,
+        runtime_command=args.runtime_command,
+        interval_minutes=args.interval_minutes,
+        actor=args.actor,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Wrote scheduler template: {result['path']}")
+        print(f"Install: {result['install_hint']}")
+    return 0
+
+
+def _cmd_operation_list(args: argparse.Namespace) -> int:
+    result = list_operations(
+        Path(args.workspace),
+        limit=args.limit,
+        operation_type=args.type,
+        target=args.target,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        for operation in result["operations"]:
+            print(f"{operation['id']} {operation.get('type')} {operation.get('actor')} {operation.get('started_at')}")
+    return 0
+
+
+def _cmd_operation_show(args: argparse.Namespace) -> int:
+    result = show_operation(Path(args.workspace), args.operation_id)
+    if args.json:
+        _print_json(result)
+    else:
+        if result.get("ok"):
+            operation = result["operation"]
+            print(f"{operation['id']} {operation.get('type')} {operation.get('status')}")
+            for item in operation.get("changed_files", []):
+                if isinstance(item, dict) and item.get("path"):
+                    print(f"- {item['path']}")
+        else:
+            print(result.get("message", "Operation not found"), file=sys.stderr)
+    return 0 if result.get("ok") else 1
 
 
 def _cmd_mcp_tools(args: argparse.Namespace) -> int:
@@ -1070,6 +1186,55 @@ def build_parser() -> argparse.ArgumentParser:
     node_restore.add_argument("--json", action="store_true")
     node_restore.set_defaults(func=_cmd_node_restore)
 
+    node_compact = node_subparsers.add_parser("compact", help="Compact a node into BRIEF.md")
+    node_compact.add_argument("node_id")
+    node_compact.add_argument("--workspace", default=".")
+    node_compact.add_argument("--actor", default="system:compact")
+    node_compact.add_argument("--json", action="store_true")
+    node_compact.set_defaults(func=_cmd_node_compact)
+
+    edge_parser = subparsers.add_parser("edge", help="Shared edge lifecycle operations")
+    edge_subparsers = edge_parser.add_subparsers(dest="edge_command", required=True)
+    edge_create = edge_subparsers.add_parser("create", help="Create a cross-node shared context edge")
+    edge_create.add_argument("edge_id")
+    edge_create.add_argument("--workspace", default=".")
+    edge_create.add_argument("--kind", required=True)
+    edge_create.add_argument("--title", required=True)
+    edge_create.add_argument("--node", action="append", required=True)
+    edge_create.add_argument("--summary")
+    edge_create.add_argument("--actor", required=True)
+    edge_create.add_argument("--json", action="store_true")
+    edge_create.set_defaults(func=_cmd_edge_create)
+
+    edge_list = edge_subparsers.add_parser("list", help="List shared context edges")
+    edge_list.add_argument("--workspace", default=".")
+    edge_list.add_argument("--node")
+    edge_list.add_argument("--include-archived", action="store_true")
+    edge_list.add_argument("--json", action="store_true")
+    edge_list.set_defaults(func=_cmd_edge_list)
+
+    edge_archive_cmd = edge_subparsers.add_parser("archive", help="Archive a shared context edge")
+    edge_archive_cmd.add_argument("edge_id")
+    edge_archive_cmd.add_argument("--workspace", default=".")
+    edge_archive_cmd.add_argument("--actor", required=True)
+    edge_archive_cmd.add_argument("--reason", required=True)
+    edge_archive_cmd.add_argument("--json", action="store_true")
+    edge_archive_cmd.set_defaults(func=_cmd_edge_archive)
+
+    edge_restore_cmd = edge_subparsers.add_parser("restore", help="Restore an archived edge")
+    edge_restore_cmd.add_argument("edge_id")
+    edge_restore_cmd.add_argument("--workspace", default=".")
+    edge_restore_cmd.add_argument("--actor", required=True)
+    edge_restore_cmd.add_argument("--json", action="store_true")
+    edge_restore_cmd.set_defaults(func=_cmd_edge_restore)
+
+    edge_compact = edge_subparsers.add_parser("compact", help="Compact an edge into BRIEF.md")
+    edge_compact.add_argument("edge_id")
+    edge_compact.add_argument("--workspace", default=".")
+    edge_compact.add_argument("--actor", default="system:compact")
+    edge_compact.add_argument("--json", action="store_true")
+    edge_compact.set_defaults(func=_cmd_edge_compact)
+
     actor_parser = subparsers.add_parser("actor", help="Actor assignment operations")
     actor_subparsers = actor_parser.add_subparsers(dest="actor_command", required=True)
     actor_assign_cmd = actor_subparsers.add_parser("assign", help="Assign an actor to a node")
@@ -1199,6 +1364,33 @@ def build_parser() -> argparse.ArgumentParser:
     mcp_serve = mcp_subparsers.add_parser("serve", help="Serve JSON-line MCP-compatible requests")
     mcp_serve.set_defaults(func=_cmd_mcp_serve)
 
+    scheduler_parser = subparsers.add_parser("scheduler", help="External scheduler template operations")
+    scheduler_subparsers = scheduler_parser.add_subparsers(dest="scheduler_command", required=True)
+    scheduler_install = scheduler_subparsers.add_parser("install", help="Write cron or launchd scheduler templates")
+    scheduler_install.add_argument("kind", choices=["cron", "launchd"])
+    scheduler_install.add_argument("--workspace", default=".")
+    scheduler_install.add_argument("--runtime-command")
+    scheduler_install.add_argument("--interval-minutes", type=int, default=15)
+    scheduler_install.add_argument("--actor", default="system:scheduler")
+    scheduler_install.add_argument("--json", action="store_true")
+    scheduler_install.set_defaults(func=_cmd_scheduler_install)
+
+    operation_parser = subparsers.add_parser("operation", help="Audit operation visibility")
+    operation_subparsers = operation_parser.add_subparsers(dest="operation_command", required=True)
+    operation_list = operation_subparsers.add_parser("list", help="List audit operation records")
+    operation_list.add_argument("--workspace", default=".")
+    operation_list.add_argument("--limit", type=int, default=20)
+    operation_list.add_argument("--type")
+    operation_list.add_argument("--target")
+    operation_list.add_argument("--json", action="store_true")
+    operation_list.set_defaults(func=_cmd_operation_list)
+
+    operation_show = operation_subparsers.add_parser("show", help="Show an audit operation record")
+    operation_show.add_argument("operation_id")
+    operation_show.add_argument("--workspace", default=".")
+    operation_show.add_argument("--json", action="store_true")
+    operation_show.set_defaults(func=_cmd_operation_show)
+
     backup_parser = subparsers.add_parser("backup", help="Backup operations")
     backup_subparsers = backup_parser.add_subparsers(dest="backup_command", required=True)
     backup_create = backup_subparsers.add_parser("create", help="Create a workspace backup")
@@ -1214,14 +1406,6 @@ def build_parser() -> argparse.ArgumentParser:
     rollback_preview_parser.add_argument("--workspace", default=".")
     rollback_preview_parser.add_argument("--json", action="store_true")
     rollback_preview_parser.set_defaults(func=_cmd_rollback_preview)
-
-    for name in [
-        "operation",
-    ]:
-        reserved = subparsers.add_parser(name, help=f"Reserved {name} command group")
-        reserved.add_argument("args", nargs="*")
-        reserved.add_argument("--json", action="store_true")
-        reserved.set_defaults(func=_cmd_reserved)
 
     return parser
 

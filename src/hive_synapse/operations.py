@@ -44,3 +44,51 @@ class OperationLog:
         path = self.paths.operations / f"{record.id}.yaml"
         atomic_write_text(path, yaml.safe_dump(record.model_dump(mode="json"), sort_keys=False))
         return record
+
+
+def _read_operation(path: Path, root: Path) -> dict[str, Any]:
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        data = {}
+    data.setdefault("id", path.stem)
+    data["path"] = str(path.relative_to(root))
+    return data
+
+
+def list_operations(
+    root: Path,
+    *,
+    limit: int = 20,
+    operation_type: str | None = None,
+    target: str | None = None,
+) -> dict[str, Any]:
+    paths = WorkspacePaths(root.resolve())
+    paths.require_workspace()
+    operations = []
+    for path in sorted(paths.operations.glob("*.yaml"), reverse=True):
+        data = _read_operation(path, paths.root)
+        if operation_type and data.get("type") != operation_type:
+            continue
+        if target and target not in [str(item) for item in data.get("targets", [])]:
+            continue
+        operations.append(data)
+        if limit and len(operations) >= limit:
+            break
+    return {"ok": True, "operations": operations, "count": len(operations)}
+
+
+def show_operation(root: Path, operation_id: str) -> dict[str, Any]:
+    paths = WorkspacePaths(root.resolve())
+    paths.require_workspace()
+    matches = list(paths.operations.glob(f"{operation_id}.yaml"))
+    if not matches:
+        matches = list(paths.operations.glob(f"*{operation_id}*.yaml"))
+    if not matches:
+        return {
+            "ok": False,
+            "operation_id": operation_id,
+            "error": "operation.not_found",
+            "message": f"No operation record found for {operation_id}",
+        }
+    operation = _read_operation(sorted(matches)[0], paths.root)
+    return {"ok": True, "operation": operation}
