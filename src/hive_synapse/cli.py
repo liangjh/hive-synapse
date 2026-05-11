@@ -28,6 +28,7 @@ from .llm import (
     list_providers,
 )
 from .mcp import call_tool, list_tools, serve_json_lines
+from .sessions import refresh_signin, sign_in_actor
 from .lifecycle import archive_actor, archive_node, assign_actor, create_node, move_node, restore_node
 from .promotion import apply_proposal, list_proposals, reject_proposal, review_proposal, sweep_promotability
 from .skills import list_skills, register_skill, update_skill_status
@@ -622,6 +623,32 @@ def _cmd_actor_archive(args: argparse.Namespace) -> int:
         _print_json(result)
     else:
         print(f"Archived actor: {args.actor_id}")
+    return 0
+
+
+def _cmd_actor_signin(args: argparse.Namespace) -> int:
+    result = sign_in_actor(
+        Path(args.workspace),
+        args.actor_id,
+        home_node=args.home_node,
+        role=args.role,
+        instance=args.instance,
+        operator=args.actor,
+        require_assignment=args.require_assignment,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(result["bootstrap"])
+    return 0
+
+
+def _cmd_actor_refresh(args: argparse.Namespace) -> int:
+    result = refresh_signin(Path(args.workspace), args.signin_id, operator=args.actor)
+    if args.json:
+        _print_json(result)
+    else:
+        print(result["bootstrap"])
     return 0
 
 
@@ -1253,6 +1280,24 @@ def build_parser() -> argparse.ArgumentParser:
     actor_archive_cmd.add_argument("--reason", required=True)
     actor_archive_cmd.add_argument("--json", action="store_true")
     actor_archive_cmd.set_defaults(func=_cmd_actor_archive)
+
+    actor_signin_cmd = actor_subparsers.add_parser("signin", help="Sign an actor into a node and emit its context pack")
+    actor_signin_cmd.add_argument("actor_id")
+    actor_signin_cmd.add_argument("--workspace", default=".")
+    actor_signin_cmd.add_argument("--home-node")
+    actor_signin_cmd.add_argument("--role")
+    actor_signin_cmd.add_argument("--instance")
+    actor_signin_cmd.add_argument("--actor")
+    actor_signin_cmd.add_argument("--require-assignment", action="store_true")
+    actor_signin_cmd.add_argument("--json", action="store_true")
+    actor_signin_cmd.set_defaults(func=_cmd_actor_signin)
+
+    actor_refresh_cmd = actor_subparsers.add_parser("refresh", help="Refresh a sign-in context pack")
+    actor_refresh_cmd.add_argument("signin_id")
+    actor_refresh_cmd.add_argument("--workspace", default=".")
+    actor_refresh_cmd.add_argument("--actor")
+    actor_refresh_cmd.add_argument("--json", action="store_true")
+    actor_refresh_cmd.set_defaults(func=_cmd_actor_refresh)
 
     skill_parser = subparsers.add_parser("skill", help="Shared skill registry operations")
     skill_subparsers = skill_parser.add_subparsers(dest="skill_command", required=True)

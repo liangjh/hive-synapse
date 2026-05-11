@@ -106,9 +106,50 @@ Assign humans or agents to home nodes:
   --actor human:you
 ```
 
-Each agent can keep private working memory under `memory/records/agents/<agent-id>/`, while reusable knowledge is compacted into candidate records and promoted through review workflows.
+Each agent can keep private working memory under `memory/records/agents/<agent-id>/`, while reusable knowledge is compacted into candidate records and promoted through review workflows. Hive Synapse does not need to own the agent's entire private memory; it owns the shared organizational memory and the context packs agents must load at startup.
 
-## 5. Configure LLM profiles
+## 5. Sign agents in and hydrate context
+
+Do not copy organization memory into the agent folder. Sign the actor in and let Hive Synapse compile the correct context pack from the hierarchy and graph:
+
+```bash
+./bin/hive actor signin agent:codex-quant-001 \
+  --workspace ~/Obsidian/HiveSecondBrain \
+  --require-assignment \
+  --json
+```
+
+For an ad hoc actor without an assignment, provide the node and role explicitly:
+
+```bash
+./bin/hive actor signin agent:adhoc-research-001 \
+  --workspace ~/Obsidian/HiveSecondBrain \
+  --home-node domains/philosophy \
+  --role research-partner
+```
+
+Sign-in creates `org/signins/<signin-id>.yaml`, compiles `memory/generated/context-packs/nodes/<node-id>/PACK.md`, and returns bootstrap instructions. The context pack includes:
+
+- parent node charters, briefs, and current context from the top of the tree down to the actor's node;
+- the actor's effective node charter, brief, and current context;
+- active shared edge briefs and current context for explicitly connected cross-domain collaborations;
+- dirty context warnings and a manifest with source paths and token estimates.
+
+Long-running agents should refresh before important work or after upstream context changes:
+
+```bash
+./bin/hive actor refresh <signin-id> \
+  --workspace ~/Obsidian/HiveSecondBrain
+```
+
+Two-way information flow:
+
+- **Top-down:** org, department, team, and edge updates trigger context invalidation; the next sign-in or refresh recompiles the pack.
+- **Bottom-up:** agents summarize their private work into import/candidate records, then use promotion workflows for team or org memory.
+- **Lateral:** teams share bounded context only through explicit graph edges; unrelated domains remain isolated.
+- **Audit:** sign-ins, refreshes, compactions, promotions, and context compiles are recorded under `memory/operations/`.
+
+## 6. Configure LLM profiles
 
 Initialize LLM policy and add profiles. Profiles are metadata and policy; credentials are referenced by environment variable names rather than stored as raw secrets.
 
@@ -134,7 +175,7 @@ Initialize LLM policy and add profiles. Profiles are metadata and policy; creden
 
 For local or deterministic operation, use the built-in deterministic profile first and add network profiles only when you are ready to run real summarization/classification.
 
-## 6. Add ingestion points
+## 7. Add ingestion points
 
 Every node has an import workspace:
 
@@ -167,7 +208,7 @@ Processing flow:
 ./bin/hive promote apply <proposal-id> --workspace ~/Obsidian/HiveSecondBrain --actor human:you
 ```
 
-## 7. Create explicit cross-domain collaborations
+## 8. Create explicit cross-domain collaborations
 
 Use edges when two domains need scoped shared memory. Example: quant trading and philosophy share a bounded collaboration on risk, decision-making, and epistemology:
 
@@ -197,7 +238,7 @@ List edges:
 ./bin/hive edge list --workspace ~/Obsidian/HiveSecondBrain --node domains/quant-trading
 ```
 
-## 8. Compact summaries and build context packs
+## 9. Compact summaries and build context packs
 
 Generate a node brief:
 
@@ -229,7 +270,7 @@ Read:
 - `memory/generated/context-packs/nodes/<node-id>/PACK.md` — generated startup context for agents.
 - `memory/generated/context-packs/nodes/<node-id>/MANIFEST.yaml` — sources, token estimate, and validation status.
 
-## 9. Schedule recurring maintenance
+## 10. Schedule recurring maintenance
 
 Hive Synapse writes OS scheduler templates instead of running its own daemon. This keeps the runtime simple and auditable.
 
@@ -266,7 +307,7 @@ You can enqueue explicit compaction work:
   --reason "scheduled collaboration rollup"
 ```
 
-## 10. View audit history and rollback surface
+## 11. View audit history and rollback surface
 
 List recent operations:
 
@@ -288,7 +329,7 @@ Preview rollback impact:
 
 Use Git or your sync provider for hard rollback. Hive operation records tell you what changed, which files were touched, and whether the operation has a supported rollback strategy.
 
-## 11. Validate and operate safely
+## 12. Validate and operate safely
 
 Run this after major changes, sync events, or agent activity:
 
