@@ -9,6 +9,42 @@ Hive Synapse ships adapter-native skills and commands inside the repo so they ca
 - Claude commands: `adapters/claude/commands/hive-*.md`
 - Install helpers: `adapters/codex/install-skills.sh`, `adapters/claude/install-commands.sh`
 
+
+## Tool-Agnostic Source
+
+Canonical skill definitions live in `skills/hive/`. Treat this directory as the source of truth for portable Hive behavior. Adapter-specific folders translate the same behavior into harness-native packaging:
+
+- Codex uses skill directories containing `SKILL.md`.
+- Claude uses slash-command Markdown files with command metadata and allowed-tool hints.
+- Generic/other agents can consume `skills/hive/*/SKILL.md` directly or transform them into their own plugin format.
+
+Install from the canonical source with the unified installer:
+
+```bash
+scripts/install-agent-skills.py codex
+scripts/install-agent-skills.py claude
+scripts/install-agent-skills.py generic --target ./agent-skills
+scripts/install-agent-skills.py all
+```
+
+Preview without writing:
+
+```bash
+scripts/install-agent-skills.py all --dry-run
+```
+
+## Adapter Differences
+
+The Hive semantics are the same across harnesses; only the packaging and invocation surface differs.
+
+| Harness | Repo source | Installed form | Practical difference |
+| --- | --- | --- | --- |
+| Codex | `skills/hive/<skill>/SKILL.md` | `$CODEX_HOME/skills/<skill>/SKILL.md` | Skills are discovered by name/description and loaded when relevant. |
+| Claude | `adapters/claude/commands/hive-*.md` | `$CLAUDE_HOME/commands/hive-*.md` | Commands are explicit slash-command style prompt wrappers with allowed-tool metadata. |
+| Generic/OpenClaw/Hermes/etc. | `skills/hive/<skill>/SKILL.md` | Any configured skill/plugin directory | Use the canonical Markdown and manifest, then map Hive commands to that harness's tool permission model. |
+
+For new harnesses, start from `skills/hive/MANIFEST.yaml`, copy each `SKILL.md`, and add only the harness-specific metadata required for invocation and tool permissions. Do not fork Hive memory semantics per harness.
+
 ## Categories
 
 - `hive-context` — general Hive command routing.

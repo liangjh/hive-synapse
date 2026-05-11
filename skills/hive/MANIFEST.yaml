@@ -1,0 +1,42 @@
+id: hive_synapse_agent_skills
+schema_version: "0.1.0"
+skill_root: skills/hive
+format: generic-skill-md
+skills:
+  - id: hive-context
+    category: general
+    path: skills/hive/hive-context/SKILL.md
+    description: General Hive Synapse context, validation, and skill routing.
+  - id: hive-context-sync
+    category: context_sync
+    path: skills/hive/hive-context-sync/SKILL.md
+    description: Agent sign-in, scoped hydration, context packs, refresh, and stale checks.
+  - id: hive-ingest-summarize
+    category: ingestion_summarization
+    path: skills/hive/hive-ingest-summarize/SKILL.md
+    description: Import notes, documents, URLs, and external references into candidate memory.
+  - id: hive-compaction-rollups
+    category: compaction
+    path: skills/hive/hive-compaction-rollups/SKILL.md
+    description: Node and edge compaction, generated briefs, and rollup jobs.
+  - id: hive-scheduler-jobs
+    category: scheduling_jobs
+    path: skills/hive/hive-scheduler-jobs/SKILL.md
+    description: Cron/launchd templates, job queue operations, watchdogs, and audit visibility.
+  - id: hive-governance-promotion
+    category: governance
+    path: skills/hive/hive-governance-promotion/SKILL.md
+    description: Promotion, review, policy, rollback, and shared-memory governance.
+adapters:
+  codex:
+    install_default: "${CODEX_HOME:-$HOME/.codex}/skills"
+    source: skills/hive
+    mode: copy_skill_directories
+  claude:
+    install_default: "${CLAUDE_HOME:-$HOME/.claude}/commands"
+    source: adapters/claude/commands
+    mode: copy_slash_command_files
+  generic:
+    install_default: ./agent-skills
+    source: skills/hive
+    mode: copy_skill_directories
