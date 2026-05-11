@@ -9,7 +9,6 @@ Use this checklist for a real local Hive Synapse install using Obsidian or anoth
 - [ ] Run `./bin/hive --help`.
 - [ ] Optional: run `uv sync --extra llm` for LiteLLM support.
 - [ ] Optional: install editable package with `python -m pip install -e .`.
-- [ ] Optional: install local hooks with `uv run --extra dev pre-commit install`.
 
 ## Workspace
 

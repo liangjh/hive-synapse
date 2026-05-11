@@ -60,13 +60,6 @@ or:
 python -m pip install -e ".[llm]"
 ```
 
-For contributor checkouts, install the same Ruff hooks that CI expects:
-
-```bash
-uv run --extra dev pre-commit install
-uv run --extra dev pre-commit run --all-files
-```
-
 ## 2. Create a Workspace
 
 Start with a fixture workspace to verify the installation:

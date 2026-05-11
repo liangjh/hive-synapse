@@ -26,7 +26,6 @@ Default test tooling for Python:
 ```text
 pytest
 pytest-cov
-ruff
 mypy or pyright
 freezegun or deterministic clock helper
 tmp_path fixture for workspace tests
