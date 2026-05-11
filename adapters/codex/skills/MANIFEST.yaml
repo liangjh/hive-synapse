@@ -1,0 +1,28 @@
+id: hive_synapse_codex_skills
+runtime: codex
+skill_root: adapters/codex/skills
+skills:
+  - id: hive-context
+    category: general
+    path: adapters/codex/skills/hive-context/SKILL.md
+    description: General Hive Synapse context, validation, and skill routing.
+  - id: hive-context-sync
+    category: context_sync
+    path: adapters/codex/skills/hive-context-sync/SKILL.md
+    description: Agent sign-in, scoped hydration, context packs, refresh, and stale checks.
+  - id: hive-ingest-summarize
+    category: ingestion_summarization
+    path: adapters/codex/skills/hive-ingest-summarize/SKILL.md
+    description: Import notes, documents, URLs, and external references into candidate memory.
+  - id: hive-compaction-rollups
+    category: compaction
+    path: adapters/codex/skills/hive-compaction-rollups/SKILL.md
+    description: Node and edge compaction, generated briefs, and rollup jobs.
+  - id: hive-scheduler-jobs
+    category: scheduling_jobs
+    path: adapters/codex/skills/hive-scheduler-jobs/SKILL.md
+    description: Cron/launchd templates, job queue operations, watchdogs, and audit visibility.
+  - id: hive-governance-promotion
+    category: governance
+    path: adapters/codex/skills/hive-governance-promotion/SKILL.md
+    description: Promotion, review, policy, rollback, and shared-memory governance.
