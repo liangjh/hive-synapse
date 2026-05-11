@@ -4,17 +4,18 @@ from pathlib import Path
 
 from . import simple_yaml as yaml
 from .charters import default_charter_body
-
 from .frontmatter import dump_markdown
 from .fs import atomic_write_text
-from .ids import new_id, utc_now_iso
+from .ids import utc_now_iso
 from .models import WorkspaceConfig
 from .operations import OperationLog
-from .paths import REQUIRED_DIRS, WorkspacePaths, target_to_path_fragment
+from .paths import WorkspacePaths, target_to_path_fragment
 from .policies import ensure_operation_policy
 
 
-def create_workspace(root: Path, *, fixture: str | None = None, force: bool = False) -> WorkspacePaths:
+def create_workspace(
+    root: Path, *, fixture: str | None = None, force: bool = False
+) -> WorkspacePaths:
     root = root.resolve()
     root.mkdir(parents=True, exist_ok=True)
     paths = WorkspacePaths(root)
@@ -34,7 +35,15 @@ def create_workspace(root: Path, *, fixture: str | None = None, force: bool = Fa
     if not budget_path.exists() or force:
         atomic_write_text(
             budget_path,
-            yaml.safe_dump({"id": "context_budget_default", "budget_tokens": 24000, "warn_at_ratio": 0.8, "on_over_budget": "create_compaction_job"}, sort_keys=False),
+            yaml.safe_dump(
+                {
+                    "id": "context_budget_default",
+                    "budget_tokens": 24000,
+                    "warn_at_ratio": 0.8,
+                    "on_over_budget": "create_compaction_job",
+                },
+                sort_keys=False,
+            ),
         )
     operation_policy_path = ensure_operation_policy(paths, force=force)
 
@@ -101,7 +110,11 @@ def _write_node_charter(paths: WorkspacePaths, node: dict, *, now: str, force: b
     )
     _write_if_allowed(
         mem_dir / "CHARTER_HISTORY.md",
-        f"# Charter History: {node['title']}\n\n## {now} — created by fixture:basic-org\n\nInitial fixture charter created.\n",
+        (
+            f"# Charter History: {node['title']}\n\n"
+            f"## {now} — created by fixture:basic-org\n\n"
+            "Initial fixture charter created.\n"
+        ),
         force=force,
     )
 
@@ -147,12 +160,8 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
     ]
     for node in nodes:
         node["status"] = "active"
-        node["current_memory_file"] = (
-            f"memory/records/nodes/{node['id']}/CURRENT.md"
-        )
-        node["history_memory_file"] = (
-            f"memory/records/nodes/{node['id']}/HISTORY.md"
-        )
+        node["current_memory_file"] = f"memory/records/nodes/{node['id']}/CURRENT.md"
+        node["history_memory_file"] = f"memory/records/nodes/{node['id']}/HISTORY.md"
         node["import_workspace"] = f"memory/imports/{node['id']}/"
         _write_if_allowed(
             _node_path(paths, node["id"]),
@@ -162,7 +171,10 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         mem_dir = _node_memory_dir(paths, node["id"])
         _write_if_allowed(
             mem_dir / "CURRENT.md",
-            f"# Current Memory: {node['title']}\n\nThis is the current operating context for `{node['id']}`.\n",
+            (
+                f"# Current Memory: {node['title']}\n\n"
+                f"This is the current operating context for `{node['id']}`.\n"
+            ),
             force=force,
         )
         _write_if_allowed(
@@ -179,8 +191,12 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "nodes": ["departments/engineering", "departments/marketing", "projects/project-launch-x"],
         "authority": "shared",
         "status": "active",
-        "current_memory_file": "memory/records/edges/engineering__marketing__project-launch-x/CURRENT.md",
-        "history_memory_file": "memory/records/edges/engineering__marketing__project-launch-x/HISTORY.md",
+        "current_memory_file": (
+            "memory/records/edges/engineering__marketing__project-launch-x/CURRENT.md"
+        ),
+        "history_memory_file": (
+            "memory/records/edges/engineering__marketing__project-launch-x/HISTORY.md"
+        ),
         "import_workspace": "memory/imports/edges/engineering__marketing__project-launch-x/",
     }
     _write_if_allowed(
@@ -189,11 +205,19 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         force=force,
     )
     edge_dir = paths.root / "memory" / "records" / "edges" / edge["id"]
-    _write_if_allowed(edge_dir / "CURRENT.md", "# Current Edge Memory\n\nShared goals and handoffs.\n", force=force)
-    _write_if_allowed(edge_dir / "HISTORY.md", "# Historical Edge Memory\n\nPast shared context.\n", force=force)
+    _write_if_allowed(
+        edge_dir / "CURRENT.md",
+        "# Current Edge Memory\n\nShared goals and handoffs.\n",
+        force=force,
+    )
+    _write_if_allowed(
+        edge_dir / "HISTORY.md", "# Historical Edge Memory\n\nPast shared context.\n", force=force
+    )
 
     raw_path = paths.root / "memory" / "raw" / "demo-source.md"
-    _write_if_allowed(raw_path, "# Demo Source\n\nEngineering uses source-linked memory records.\n", force=force)
+    _write_if_allowed(
+        raw_path, "# Demo Source\n\nEngineering uses source-linked memory records.\n", force=force
+    )
 
     record = {
         "id": "mem_demo_engineering_practice_001",
@@ -225,14 +249,37 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
     )
 
     import_root = paths.root / "memory" / "imports" / "departments" / "engineering"
-    for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected", "items", "reports"]:
+    for child in [
+        "inbox",
+        "fetched",
+        "normalized",
+        "compacted",
+        "candidates",
+        "processed",
+        "rejected",
+        "items",
+        "reports",
+    ]:
         (import_root / child).mkdir(parents=True, exist_ok=True)
     import_workspace = {
         "id": "import_workspace_departments_engineering",
         "target": "departments/engineering",
         "status": "active",
         "owner": "steward:engineering",
-        "paths": {child: f"memory/imports/departments/engineering/{child}/" for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected", "items", "reports"]},
+        "paths": {
+            child: f"memory/imports/departments/engineering/{child}/"
+            for child in [
+                "inbox",
+                "fetched",
+                "normalized",
+                "compacted",
+                "candidates",
+                "processed",
+                "rejected",
+                "items",
+                "reports",
+            ]
+        },
     }
     _write_if_allowed(
         import_root / "workspace.yaml",
@@ -255,7 +302,11 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "# Imported Engineering Notes\n",
         force=force,
     )
-    _write_if_allowed(import_root / "import-item-demo.yaml", yaml.safe_dump(import_item, sort_keys=False), force=force)
+    _write_if_allowed(
+        import_root / "import-item-demo.yaml",
+        yaml.safe_dump(import_item, sort_keys=False),
+        force=force,
+    )
 
     assignment = {
         "id": "assignment_codex_engineering_001",
@@ -284,7 +335,11 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "context_pack": "memory/generated/context-packs/nodes/departments/engineering/PACK.md",
         "loaded_context_packs": [],
     }
-    _write_if_allowed(paths.root / "org" / "signins" / "signin_demo_001.yaml", yaml.safe_dump(signin, sort_keys=False), force=force)
+    _write_if_allowed(
+        paths.root / "org" / "signins" / "signin_demo_001.yaml",
+        yaml.safe_dump(signin, sort_keys=False),
+        force=force,
+    )
 
     proposal = {
         "id": "promotion_demo_001",
@@ -295,7 +350,11 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "rationale": "Demo source-linked reusable practice.",
         "status": "candidate",
     }
-    _write_if_allowed(paths.root / "memory" / "proposals" / "promotion_demo_001.yaml", yaml.safe_dump(proposal, sort_keys=False), force=force)
+    _write_if_allowed(
+        paths.root / "memory" / "proposals" / "promotion_demo_001.yaml",
+        yaml.safe_dump(proposal, sort_keys=False),
+        force=force,
+    )
 
     job = {
         "id": "job_demo_node_compact_001",
@@ -306,7 +365,11 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "created_at": now,
         "inputs": {"since": "beginning"},
     }
-    _write_if_allowed(paths.root / "memory" / "jobs" / "pending" / "job_demo_node_compact_001.yaml", yaml.safe_dump(job, sort_keys=False), force=force)
+    _write_if_allowed(
+        paths.root / "memory" / "jobs" / "pending" / "job_demo_node_compact_001.yaml",
+        yaml.safe_dump(job, sort_keys=False),
+        force=force,
+    )
 
     invalidation = {
         "id": "ctxinv_demo_001",
@@ -318,7 +381,11 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "affected_targets": ["departments/engineering", "agents/codex-engineering-001"],
         "status": "open",
     }
-    _write_if_allowed(paths.root / "memory" / "state" / "context-dirty" / "ctxinv_demo_001.yaml", yaml.safe_dump(invalidation, sort_keys=False), force=force)
+    _write_if_allowed(
+        paths.root / "memory" / "state" / "context-dirty" / "ctxinv_demo_001.yaml",
+        yaml.safe_dump(invalidation, sort_keys=False),
+        force=force,
+    )
 
     archive = {
         "id": "archive_demo_001",
@@ -330,4 +397,8 @@ def write_basic_org_fixture(paths: WorkspacePaths, *, force: bool = False) -> No
         "status": "archived",
         "excluded_from_startup_context": True,
     }
-    _write_if_allowed(paths.root / "memory" / "audit" / "archive_demo_001.yaml", yaml.safe_dump(archive, sort_keys=False), force=force)
+    _write_if_allowed(
+        paths.root / "memory" / "audit" / "archive_demo_001.yaml",
+        yaml.safe_dump(archive, sort_keys=False),
+        force=force,
+    )

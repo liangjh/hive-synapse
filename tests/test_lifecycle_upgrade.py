@@ -12,7 +12,9 @@ class LifecycleUpgradeTests(unittest.TestCase):
     def test_node_actor_skill_lifecycle_and_archive_sweep(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             create = run_hive(
                 "node",
                 "create",
@@ -63,7 +65,15 @@ class LifecycleUpgradeTests(unittest.TestCase):
                 "--json",
             )
             self.assertEqual(skill.returncode, 0, skill.stderr)
-            listed = run_hive("skill", "list", "--workspace", str(workspace), "--scope", "departments/research", "--json")
+            listed = run_hive(
+                "skill",
+                "list",
+                "--workspace",
+                str(workspace),
+                "--scope",
+                "departments/research",
+                "--json",
+            )
             self.assertEqual(listed.returncode, 0, listed.stderr)
             self.assertEqual(json.loads(listed.stdout)["skills"][0]["id"], "literature-review")
             archived = run_hive(
@@ -89,15 +99,33 @@ class LifecycleUpgradeTests(unittest.TestCase):
     def test_upgrade_doctor_migration_and_template_diff(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             doctor = run_hive("upgrade", "doctor", "--workspace", str(workspace), "--json")
             self.assertEqual(doctor.returncode, 0, doctor.stderr)
-            migrations = run_hive("upgrade", "migration-list", "--workspace", str(workspace), "--json")
+            migrations = run_hive(
+                "upgrade", "migration-list", "--workspace", str(workspace), "--json"
+            )
             self.assertEqual(migrations.returncode, 0, migrations.stderr)
-            dry = run_hive("upgrade", "migration-dry-run", "001_runtime_markers", "--workspace", str(workspace), "--json")
+            dry = run_hive(
+                "upgrade",
+                "migration-dry-run",
+                "001_runtime_markers",
+                "--workspace",
+                str(workspace),
+                "--json",
+            )
             self.assertEqual(dry.returncode, 0, dry.stderr)
             self.assertFalse(json.loads(dry.stdout)["mutates"])
-            apply = run_hive("upgrade", "migration-apply", "001_runtime_markers", "--workspace", str(workspace), "--json")
+            apply = run_hive(
+                "upgrade",
+                "migration-apply",
+                "001_runtime_markers",
+                "--workspace",
+                str(workspace),
+                "--json",
+            )
             self.assertEqual(apply.returncode, 0, apply.stderr)
             self.assertTrue((workspace / "memory/migrations/001_runtime_markers.yaml").exists())
             diff = run_hive("upgrade", "template-diff", "--workspace", str(workspace), "--json")

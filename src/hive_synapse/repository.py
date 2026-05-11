@@ -57,7 +57,9 @@ class WorkspaceRepository:
         else:
             from .frontmatter import dump_markdown
 
-            atomic_write_text(path, dump_markdown(frontmatter, body), expected_sha256=expected_sha256)
+            atomic_write_text(
+                path, dump_markdown(frontmatter, body), expected_sha256=expected_sha256
+            )
         return path
 
     def read_yaml(self, relative_path: str | Path) -> dict[str, Any]:

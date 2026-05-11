@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from .context import compile_context_pack, context_impact
 from .guardrails import dirty_markers_for_target
@@ -109,10 +110,7 @@ TOOL_DESCRIPTIONS = {
 def list_tools() -> dict[str, Any]:
     return {
         "ok": True,
-        "tools": [
-            {"name": name, "description": TOOL_DESCRIPTIONS[name]}
-            for name in sorted(TOOLS)
-        ],
+        "tools": [{"name": name, "description": TOOL_DESCRIPTIONS[name]} for name in sorted(TOOLS)],
     }
 
 
@@ -132,7 +130,11 @@ def serve_json_lines() -> int:
                 params = request.get("params") or {}
                 response = call_tool(str(params.get("name")), dict(params.get("arguments") or {}))
             else:
-                response = {"ok": False, "error": "mcp.method_not_supported", "method": request.get("method")}
+                response = {
+                    "ok": False,
+                    "error": "mcp.method_not_supported",
+                    "method": request.get("method"),
+                }
         except Exception as exc:
             response = {"ok": False, "error": exc.__class__.__name__, "message": str(exc)}
         sys.stdout.write(json.dumps(response, sort_keys=True) + "\n")

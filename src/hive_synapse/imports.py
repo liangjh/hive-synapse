@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
+
 from . import simple_yaml as yaml
 from .connectors import classify_connector, external_ref_for
 from .errors import WorkspaceError
@@ -71,8 +72,16 @@ def _read_import_text(paths: WorkspacePaths, item: dict[str, Any]) -> str:
 
 
 def _import_input_refs(item: dict[str, Any]) -> list[dict[str, Any]]:
-    ref = item.get("source_ref") or item.get("external_ref") or {"source_id": f"import:{item.get('id')}"}
-    return [ref] if isinstance(ref, dict) else [{"source_id": f"import:{item.get('id')}", "locator": str(ref)}]
+    ref = (
+        item.get("source_ref")
+        or item.get("external_ref")
+        or {"source_id": f"import:{item.get('id')}"}
+    )
+    return (
+        [ref]
+        if isinstance(ref, dict)
+        else [{"source_id": f"import:{item.get('id')}", "locator": str(ref)}]
+    )
 
 
 def _string_list(value: Any, *, fallback: list[str] | None = None) -> list[str]:
@@ -99,7 +108,17 @@ def _model_descriptor(provider: str, model: str) -> str:
 
 def _ensure_import_workspace(paths: WorkspacePaths, target: str) -> Path:
     root = _import_dir(paths, target)
-    for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected", "items", "reports"]:
+    for child in [
+        "inbox",
+        "fetched",
+        "normalized",
+        "compacted",
+        "candidates",
+        "processed",
+        "rejected",
+        "items",
+        "reports",
+    ]:
         (root / child).mkdir(parents=True, exist_ok=True)
     workspace = {
         "id": f"import_workspace_{target.replace('/', '_')}",
@@ -107,7 +126,17 @@ def _ensure_import_workspace(paths: WorkspacePaths, target: str) -> Path:
         "status": "active",
         "paths": {
             child: str((root / child).relative_to(paths.root)) + "/"
-            for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected", "items", "reports"]
+            for child in [
+                "inbox",
+                "fetched",
+                "normalized",
+                "compacted",
+                "candidates",
+                "processed",
+                "rejected",
+                "items",
+                "reports",
+            ]
         },
     }
     workspace_path = root / "workspace.yaml"
@@ -116,7 +145,9 @@ def _ensure_import_workspace(paths: WorkspacePaths, target: str) -> Path:
     return root
 
 
-def add_import(root: Path, target: str, source: str, *, actor: str = "system:import") -> dict[str, Any]:
+def add_import(
+    root: Path, target: str, source: str, *, actor: str = "system:import"
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     repo = WorkspaceRepository(paths.root)
@@ -128,7 +159,9 @@ def add_import(root: Path, target: str, source: str, *, actor: str = "system:imp
         "id": import_id,
         "workspace": f"import_workspace_{target.replace('/', '_')}",
         "target": target,
-        "source_type": "markdown" if str(source_path).lower().endswith((".md", ".markdown")) else "file",
+        "source_type": "markdown"
+        if str(source_path).lower().endswith((".md", ".markdown"))
+        else "file",
         "state": "dropped",
         "created_at": now,
         "raw_preserved": False,
@@ -136,7 +169,14 @@ def add_import(root: Path, target: str, source: str, *, actor: str = "system:imp
     }
     changed_files: list[dict[str, Any]] = []
     if source_path.exists():
-        raw_rel = Path("memory") / "raw" / "imports" / target_to_path_fragment(target) / import_id / source_path.name
+        raw_rel = (
+            Path("memory")
+            / "raw"
+            / "imports"
+            / target_to_path_fragment(target)
+            / import_id
+            / source_path.name
+        )
         raw_path = repo.copy_raw_file(source_path, raw_rel)
         item["local_path"] = record_relative_path(raw_path, paths.root)
         item["raw_preserved"] = True
@@ -144,7 +184,14 @@ def add_import(root: Path, target: str, source: str, *, actor: str = "system:imp
         changed_files.append({"path": item["local_path"]})
     else:
         text = source
-        raw_rel = Path("memory") / "raw" / "imports" / target_to_path_fragment(target) / import_id / "dropped-text.md"
+        raw_rel = (
+            Path("memory")
+            / "raw"
+            / "imports"
+            / target_to_path_fragment(target)
+            / import_id
+            / "dropped-text.md"
+        )
         raw_path = repo.preserve_raw(raw_rel, text.encode("utf-8"))
         item["source_type"] = "text"
         item["local_path"] = record_relative_path(raw_path, paths.root)
@@ -166,7 +213,9 @@ def add_import(root: Path, target: str, source: str, *, actor: str = "system:imp
     return {"ok": True, "import_id": import_id, "item": item, "operation": operation.id}
 
 
-def fetch_import(root: Path, target: str, url: str, *, connector: str | None = None, actor: str = "system:import") -> dict[str, Any]:
+def fetch_import(
+    root: Path, target: str, url: str, *, connector: str | None = None, actor: str = "system:import"
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     import_root = _ensure_import_workspace(paths, target)
@@ -268,7 +317,8 @@ def classify_import(
             "target": item["target"],
             "topics": topics,
             "temporal_status": "current" if "deprecated" not in lower else "historical",
-            "sensitivity": sensitivity or ("confidential" if "confidential" in lower else "internal"),
+            "sensitivity": sensitivity
+            or ("confidential" if "confidential" in lower else "internal"),
             "classified_at": utc_now_iso(),
             "classifier": "deterministic:v0",
         }
@@ -290,7 +340,12 @@ def classify_import(
         changed_records=changed_records,
         rollback={"supported": True, "strategy": "restore_import_item_from_backup"},
     )
-    return {"ok": True, "import_id": import_id, "classification": item["classification"], "operation": operation.id}
+    return {
+        "ok": True,
+        "import_id": import_id,
+        "classification": item["classification"],
+        "operation": operation.id,
+    }
 
 
 def compact_import(
@@ -305,7 +360,9 @@ def compact_import(
     paths.require_workspace()
     item_path, item = _load_import_item(paths, import_id)
     if "classification" not in item:
-        classify_import(root, import_id, actor=actor, llm_profile=llm_profile, credential=credential)
+        classify_import(
+            root, import_id, actor=actor, llm_profile=llm_profile, credential=credential
+        )
         item_path, item = _load_import_item(paths, import_id)
     text = _read_import_text(paths, item)
     model_run = None
@@ -328,7 +385,8 @@ def compact_import(
                     "content": (
                         "Summarize imported source text into concise candidate memory. "
                         "Return only JSON with summary, confidence, tags, optional sensitivity, "
-                        "and optional rationale. Preserve source-grounded facts and avoid invention."
+                        "and optional rationale. Preserve source-grounded facts and "
+                        "avoid invention."
                     ),
                 },
                 {
@@ -336,7 +394,8 @@ def compact_import(
                     "content": (
                         f"Import id: {import_id}\n"
                         f"Target node: {item.get('target')}\n"
-                        f"Classification: {yaml.safe_dump(item.get('classification') or {}, sort_keys=False)}\n\n"
+                        "Classification: "
+                        f"{yaml.safe_dump(item.get('classification') or {}, sort_keys=False)}\n\n"
                         f"Text:\n{text[:MODEL_INPUT_LIMIT]}"
                     ),
                 },
@@ -349,7 +408,12 @@ def compact_import(
     else:
         summary = " ".join(text.strip().split())[:600]
     if not summary:
-        result = {"id": new_id("import_result"), "import_id": import_id, "status": "no_changes", "created_at": utc_now_iso()}
+        result = {
+            "id": new_id("import_result"),
+            "import_id": import_id,
+            "status": "no_changes",
+            "created_at": utc_now_iso(),
+        }
         result_path = _import_dir(paths, item["target"]) / "compacted" / f"{result['id']}.yaml"
         atomic_write_text(result_path, yaml.safe_dump(result, sort_keys=False))
         return {"ok": True, "import_id": import_id, "status": "no_changes", "result": result}
@@ -365,9 +429,17 @@ def compact_import(
         "sensitivity": model_output.get("sensitivity") or item.get("sensitivity", "internal"),
         "created_at": utc_now_iso(),
         "created_by": actor,
-        "source_refs": [item.get("source_ref") or item.get("external_ref") or {"source_id": f"import:{import_id}"}],
+        "source_refs": [
+            item.get("source_ref")
+            or item.get("external_ref")
+            or {"source_id": f"import:{import_id}"}
+        ],
         "tags": _string_list(
-            ["import", *item.get("classification", {}).get("topics", []), *_string_list(model_output.get("tags"))],
+            [
+                "import",
+                *item.get("classification", {}).get("topics", []),
+                *_string_list(model_output.get("tags")),
+            ],
             fallback=["import"],
         ),
         "import_id": import_id,
@@ -390,7 +462,15 @@ def compact_import(
         }
         if model_output.get("rationale"):
             candidate["generation_rationale"] = str(model_output.get("rationale"))
-    candidate_path = paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "candidates" / f"{memory_id}.md"
+    candidate_path = (
+        paths.root
+        / "memory"
+        / "records"
+        / "nodes"
+        / target_to_path_fragment(target)
+        / "candidates"
+        / f"{memory_id}.md"
+    )
     write_markdown(candidate_path, candidate, f"# Import Candidate\n\n{summary}\n")
     item["state"] = "compacted"
     item.setdefault("candidate_records", []).append(memory_id)
@@ -399,7 +479,10 @@ def compact_import(
         {"path": record_relative_path(candidate_path, paths.root)},
         {"path": record_relative_path(item_path, paths.root)},
     ]
-    changed_records = [{"id": memory_id, "type": "memory_record"}, {"id": import_id, "type": "import_item"}]
+    changed_records = [
+        {"id": memory_id, "type": "memory_record"},
+        {"id": import_id, "type": "import_item"},
+    ]
     if model_run:
         changed_files.append({"path": record_relative_path(model_run["path"], paths.root)})
         changed_records.append({"id": model_run["record"]["id"], "type": "llm_run"})
@@ -412,7 +495,13 @@ def compact_import(
         changed_records=changed_records,
         rollback={"supported": True, "strategy": "remove_candidate_restore_import_item"},
     )
-    return {"ok": True, "import_id": import_id, "candidate_id": memory_id, "candidate_path": str(candidate_path), "operation": operation.id}
+    return {
+        "ok": True,
+        "import_id": import_id,
+        "candidate_id": memory_id,
+        "candidate_path": str(candidate_path),
+        "operation": operation.id,
+    }
 
 
 def propose_import(root: Path, import_id: str, *, actor: str = "system:import") -> dict[str, Any]:
@@ -443,12 +532,21 @@ def propose_import(root: Path, import_id: str, *, actor: str = "system:import") 
         proposal_path = paths.root / "memory" / "proposals" / f"{proposal_id}.yaml"
         report_path = _import_dir(paths, item["target"]) / "reports" / f"{proposal_id}.md"
         atomic_write_text(proposal_path, yaml.safe_dump(proposal, sort_keys=False))
-        atomic_write_text(report_path, f"# Promotion Proposal: {proposal_id}\n\nCandidate: `{candidate_id}`\n\nTarget: `{item['target']}`\n")
+        atomic_write_text(
+            report_path,
+            (
+                f"# Promotion Proposal: {proposal_id}\n\n"
+                f"Candidate: `{candidate_id}`\n\n"
+                f"Target: `{item['target']}`\n"
+            ),
+        )
         proposals.append(proposal)
-        changed_files.extend([
-            {"path": record_relative_path(proposal_path, paths.root)},
-            {"path": record_relative_path(report_path, paths.root)},
-        ])
+        changed_files.extend(
+            [
+                {"path": record_relative_path(proposal_path, paths.root)},
+                {"path": record_relative_path(report_path, paths.root)},
+            ]
+        )
     item["state"] = "proposed"
     item["proposal_ids"] = [proposal["id"] for proposal in proposals]
     _write_import_item(item_path, item)
@@ -458,7 +556,9 @@ def propose_import(root: Path, import_id: str, *, actor: str = "system:import") 
         targets=[import_id],
         command="hive import propose",
         changed_files=changed_files + [{"path": record_relative_path(item_path, paths.root)}],
-        changed_records=[{"id": proposal["id"], "type": "promotion_proposal"} for proposal in proposals],
+        changed_records=[
+            {"id": proposal["id"], "type": "promotion_proposal"} for proposal in proposals
+        ],
         rollback={"supported": True, "strategy": "remove_proposals_restore_import_item"},
     )
     return {"ok": True, "import_id": import_id, "proposals": proposals, "operation": operation.id}

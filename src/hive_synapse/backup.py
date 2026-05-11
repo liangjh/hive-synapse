@@ -24,7 +24,9 @@ def _workspace_files(root: Path) -> list[Path]:
     return files
 
 
-def create_backup(root: Path, *, actor: str = "system:backup") -> tuple[Path, Path, OperationRecord]:
+def create_backup(
+    root: Path, *, actor: str = "system:backup"
+) -> tuple[Path, Path, OperationRecord]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     backup_id = new_id("backup")

@@ -35,23 +35,43 @@ class ImportContextTests(unittest.TestCase):
             workspace = temp / "workspace"
             source = temp / "source.md"
             source.write_text("# Practice Note\n\nCurrent engineering project practice.")
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
 
-            add = run_hive("import", "add", "departments/engineering", str(source), "--workspace", str(workspace), "--json")
+            add = run_hive(
+                "import",
+                "add",
+                "departments/engineering",
+                str(source),
+                "--workspace",
+                str(workspace),
+                "--json",
+            )
             self.assertEqual(add.returncode, 0, add.stderr)
             import_id = json.loads(add.stdout)["import_id"]
 
-            classify = run_hive("import", "classify", import_id, "--workspace", str(workspace), "--json")
+            classify = run_hive(
+                "import", "classify", import_id, "--workspace", str(workspace), "--json"
+            )
             self.assertEqual(classify.returncode, 0, classify.stderr)
             self.assertIn("practice", json.loads(classify.stdout)["classification"]["topics"])
 
-            compact = run_hive("import", "compact", import_id, "--workspace", str(workspace), "--json")
+            compact = run_hive(
+                "import", "compact", import_id, "--workspace", str(workspace), "--json"
+            )
             self.assertEqual(compact.returncode, 0, compact.stderr)
             candidate_id = json.loads(compact.stdout)["candidate_id"]
-            candidate_paths = list((workspace / "memory/records/nodes/departments/engineering/candidates").glob(f"{candidate_id}.md"))
+            candidate_paths = list(
+                (workspace / "memory/records/nodes/departments/engineering/candidates").glob(
+                    f"{candidate_id}.md"
+                )
+            )
             self.assertEqual(len(candidate_paths), 1)
 
-            propose = run_hive("import", "propose", import_id, "--workspace", str(workspace), "--json")
+            propose = run_hive(
+                "import", "propose", import_id, "--workspace", str(workspace), "--json"
+            )
             self.assertEqual(propose.returncode, 0, propose.stderr)
             self.assertEqual(len(json.loads(propose.stdout)["proposals"]), 1)
 
@@ -61,8 +81,12 @@ class ImportContextTests(unittest.TestCase):
     def test_context_impact_and_invalidate(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
-            impacted = run_hive("context", "impacted", "org", "--workspace", str(workspace), "--json")
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
+            impacted = run_hive(
+                "context", "impacted", "org", "--workspace", str(workspace), "--json"
+            )
             self.assertEqual(impacted.returncode, 0, impacted.stderr)
             payload = json.loads(impacted.stdout)
             self.assertIn("departments/engineering", payload["descendants"])
@@ -85,10 +109,21 @@ class ImportContextTests(unittest.TestCase):
     def test_context_compile_includes_parent_and_edge_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
-            compile_result = run_hive("context", "compile", "departments/engineering", "--workspace", str(workspace), "--json")
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
+            compile_result = run_hive(
+                "context",
+                "compile",
+                "departments/engineering",
+                "--workspace",
+                str(workspace),
+                "--json",
+            )
             self.assertEqual(compile_result.returncode, 0, compile_result.stderr)
-            pack = workspace / "memory/generated/context-packs/nodes/departments/engineering/PACK.md"
+            pack = (
+                workspace / "memory/generated/context-packs/nodes/departments/engineering/PACK.md"
+            )
             text = pack.read_text()
             self.assertIn("Parent Context: org", text)
             self.assertIn("Shared Edge Context: engineering__marketing__project-launch-x", text)

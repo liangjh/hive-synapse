@@ -3,7 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from . import __version__, simple_yaml as yaml
+from . import __version__
+from . import simple_yaml as yaml
 from .backup import create_backup
 from .fs import atomic_write_text, sha256_file
 from .ids import new_id, utc_now_iso
@@ -21,13 +22,30 @@ def doctor(root: Path, *, require_generated: bool = False) -> dict[str, Any]:
     paths.require_workspace()
     validation = validate_workspace(paths.root)
     checks: list[dict[str, Any]] = []
-    checks.append({"code": "validation", "ok": validation.ok, "errors": [issue.model_dump() for issue in validation.errors]})
+    checks.append(
+        {
+            "code": "validation",
+            "ok": validation.ok,
+            "errors": [issue.model_dump() for issue in validation.errors],
+        }
+    )
     config = yaml.safe_load(paths.config.read_text(encoding="utf-8")) or {}
     workspace_config = config.get("hive_workspace", {}) if isinstance(config, dict) else {}
-    checks.append({"code": "runtime_version", "ok": bool(workspace_config.get("runtime_version")), "runtime_version": workspace_config.get("runtime_version"), "current_runtime": __version__})
+    checks.append(
+        {
+            "code": "runtime_version",
+            "ok": bool(workspace_config.get("runtime_version")),
+            "runtime_version": workspace_config.get("runtime_version"),
+            "current_runtime": __version__,
+        }
+    )
     if require_generated:
-        generated = list((paths.root / "memory" / "generated" / "context-packs").rglob("MANIFEST.yaml"))
-        checks.append({"code": "generated_context_packs", "ok": bool(generated), "count": len(generated)})
+        generated = list(
+            (paths.root / "memory" / "generated" / "context-packs").rglob("MANIFEST.yaml")
+        )
+        checks.append(
+            {"code": "generated_context_packs", "ok": bool(generated), "count": len(generated)}
+        )
     ok = all(check.get("ok") for check in checks)
     return {"ok": ok, "checks": checks}
 
@@ -40,7 +58,12 @@ def list_migrations(root: Path) -> dict[str, Any]:
     for path in migrations_dir.glob("*.yaml"):
         data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
         applied.add(data.get("migration_id") or data.get("id"))
-    return {"ok": True, "migrations": [{**migration, "applied": migration["id"] in applied} for migration in BUILTIN_MIGRATIONS]}
+    return {
+        "ok": True,
+        "migrations": [
+            {**migration, "applied": migration["id"] in applied} for migration in BUILTIN_MIGRATIONS
+        ],
+    }
 
 
 def migration_dry_run(root: Path, migration_id: str) -> dict[str, Any]:
@@ -49,18 +72,31 @@ def migration_dry_run(root: Path, migration_id: str) -> dict[str, Any]:
     if migration_id not in {migration["id"] for migration in BUILTIN_MIGRATIONS}:
         raise ValueError(f"Unknown migration: {migration_id}")
     changes = [
-        {"path": "memory/migrations/%s.yaml" % migration_id, "action": "create"},
+        {"path": f"memory/migrations/{migration_id}.yaml", "action": "create"},
         {"path": "memory/generated/runtime-marker.yaml", "action": "create_or_update"},
     ]
-    return {"ok": True, "migration_id": migration_id, "dry_run": True, "changes": changes, "mutates": False}
+    return {
+        "ok": True,
+        "migration_id": migration_id,
+        "dry_run": True,
+        "changes": changes,
+        "mutates": False,
+    }
 
 
-def migration_apply(root: Path, migration_id: str, *, actor: str = "system:migration") -> dict[str, Any]:
+def migration_apply(
+    root: Path, migration_id: str, *, actor: str = "system:migration"
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     backup_dir, manifest_path, backup_op = create_backup(paths.root, actor=actor)
     dry = migration_dry_run(paths.root, migration_id)
-    marker = {"id": "runtime_marker", "runtime_version": __version__, "schema_version": "0.1.0", "updated_at": utc_now_iso()}
+    marker = {
+        "id": "runtime_marker",
+        "runtime_version": __version__,
+        "schema_version": "0.1.0",
+        "updated_at": utc_now_iso(),
+    }
     marker_path = paths.root / "memory" / "generated" / "runtime-marker.yaml"
     atomic_write_text(marker_path, yaml.safe_dump(marker, sort_keys=False))
     migration_record = {
@@ -86,9 +122,19 @@ def migration_apply(root: Path, migration_id: str, *, actor: str = "system:migra
             {"path": str(manifest_path.relative_to(paths.root))},
         ],
         changed_records=[{"id": migration_record["id"], "type": "migration"}],
-        rollback={"supported": True, "strategy": "restore_backup", "backup_operation": backup_op.id},
+        rollback={
+            "supported": True,
+            "strategy": "restore_backup",
+            "backup_operation": backup_op.id,
+        },
     )
-    return {"ok": True, "migration": migration_record, "dry_run": dry, "backup": str(backup_dir), "operation": op.id}
+    return {
+        "ok": True,
+        "migration": migration_record,
+        "dry_run": dry,
+        "backup": str(backup_dir),
+        "operation": op.id,
+    }
 
 
 def template_diff(root: Path, runtime_root: Path) -> dict[str, Any]:
@@ -102,9 +148,18 @@ def template_diff(root: Path, runtime_root: Path) -> dict[str, Any]:
         rel = template.relative_to(templates_root)
         dest = paths.root / rel
         if not dest.exists():
-            diffs.append({"path": str(rel), "status": "missing", "template_sha256": sha256_file(template)})
+            diffs.append(
+                {"path": str(rel), "status": "missing", "template_sha256": sha256_file(template)}
+            )
         elif sha256_file(dest) != sha256_file(template):
-            diffs.append({"path": str(rel), "status": "different", "template_sha256": sha256_file(template), "workspace_sha256": sha256_file(dest)})
+            diffs.append(
+                {
+                    "path": str(rel),
+                    "status": "different",
+                    "template_sha256": sha256_file(template),
+                    "workspace_sha256": sha256_file(dest),
+                }
+            )
     report_id = new_id("template_diff")
     report_path = paths.root / "memory" / "audit" / f"{report_id}.yaml"
     report = {"ok": True, "id": report_id, "diffs": diffs, "mutates_templates": False}
@@ -113,7 +168,9 @@ def template_diff(root: Path, runtime_root: Path) -> dict[str, Any]:
     return report
 
 
-def template_apply_new(root: Path, runtime_root: Path, *, actor: str = "system:upgrade") -> dict[str, Any]:
+def template_apply_new(
+    root: Path, runtime_root: Path, *, actor: str = "system:upgrade"
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     templates_root = runtime_root / "templates"

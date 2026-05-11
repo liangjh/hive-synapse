@@ -50,7 +50,9 @@ def _personal_memory_home(actor_id: str, assignment: dict[str, Any] | None) -> s
     return f"memory/records/agents/{_safe_actor_fragment(actor_id)}/"
 
 
-def _context_entry(paths: WorkspacePaths, target: str, pack_path: Path, manifest_path: Path) -> dict[str, Any]:
+def _context_entry(
+    paths: WorkspacePaths, target: str, pack_path: Path, manifest_path: Path
+) -> dict[str, Any]:
     manifest = _read_yaml(manifest_path)
     return {
         "target": target,
@@ -84,8 +86,14 @@ def _bootstrap_markdown(record: dict[str, Any], context_entry: dict[str, Any]) -
             "",
             "- Treat agent-private memory as local working state.",
             "- Treat Hive node, edge, and org memory as shared organizational context.",
-            "- Submit reusable findings through imports, candidates, and promotion rather than directly editing parent memory.",
-            "- Refresh this sign-in before acting if context dirty markers or upstream changes exist.",
+            (
+                "- Submit reusable findings through imports, candidates, and promotion "
+                "rather than directly editing parent memory."
+            ),
+            (
+                "- Refresh this sign-in before acting if context dirty markers or "
+                "upstream changes exist."
+            ),
         ]
     )
 
@@ -111,7 +119,9 @@ def sign_in_actor(
     elif require_assignment:
         raise ValueError(f"No active assignment found for {actor_id}")
 
-    effective_node = home_node or (str(assignment["home_node"]) if assignment and assignment.get("home_node") else None)
+    effective_node = home_node or (
+        str(assignment["home_node"]) if assignment and assignment.get("home_node") else None
+    )
     if not effective_node:
         raise ValueError("actor signin requires --home-node when no active assignment exists")
     if effective_node not in graph.nodes:
@@ -119,7 +129,9 @@ def sign_in_actor(
     if graph.nodes[effective_node].status != "active":
         raise ValueError(f"Sign-in node is not active: {effective_node}")
 
-    effective_role = role or (str(assignment["role"]) if assignment and assignment.get("role") else "contributor")
+    effective_role = role or (
+        str(assignment["role"]) if assignment and assignment.get("role") else "contributor"
+    )
     operator_id = operator or actor_id
     instance_id = instance or f"agent-instance:{_safe_actor_fragment(actor_id)}:{new_id('run')}"
     now = utc_now_iso()
@@ -138,7 +150,9 @@ def sign_in_actor(
         "started_at": now,
         "status": "active",
         "assignment": assignment.get("id") if assignment else None,
-        "assignment_path": str(assignment_path.relative_to(paths.root)) if assignment_path else None,
+        "assignment_path": str(assignment_path.relative_to(paths.root))
+        if assignment_path
+        else None,
         "context_pack": context["pack"],
         "loaded_context_packs": [context],
         "personal_memory_home": personal_home,
@@ -151,7 +165,13 @@ def sign_in_actor(
     op = OperationLog(paths).append(
         operation_type="actor_signin",
         actor=operator_id,
-        targets=[str(paths.root), actor_id, effective_node, *record["inherited_nodes"], *record["connected_edges"]],
+        targets=[
+            str(paths.root),
+            actor_id,
+            effective_node,
+            *record["inherited_nodes"],
+            *record["connected_edges"],
+        ],
         command="hive actor signin",
         changed_files=[{"path": str(signin_path.relative_to(paths.root))}],
         changed_records=[{"id": signin_id, "type": "signin", "actor": actor_id}],
@@ -201,10 +221,18 @@ def refresh_signin(root: Path, signin_id: str, *, operator: str | None = None) -
     op = OperationLog(paths).append(
         operation_type="actor_refresh",
         actor=operator_id,
-        targets=[str(paths.root), str(record.get("actor")), effective_node, *record["inherited_nodes"], *record["connected_edges"]],
+        targets=[
+            str(paths.root),
+            str(record.get("actor")),
+            effective_node,
+            *record["inherited_nodes"],
+            *record["connected_edges"],
+        ],
         command="hive actor refresh",
         changed_files=[{"path": str(signin_path.relative_to(paths.root))}],
-        changed_records=[{"id": record.get("id", signin_id), "type": "signin", "status": record.get("status")}],
+        changed_records=[
+            {"id": record.get("id", signin_id), "type": "signin", "status": record.get("status")}
+        ],
         rollback={"supported": True, "strategy": "restore_previous_signin_record_from_git"},
     )
     return {

@@ -4,13 +4,10 @@ from pathlib import Path
 from typing import Any
 
 from . import simple_yaml as yaml
-from .models import ModelValidationError
-
 from .frontmatter import read_markdown
 from .guardrails import validate_generated_artifact, validate_memory_guardrails
-from .models import EdgeRecord, MemoryRecord, NodeRecord, ValidationReport
+from .models import EdgeRecord, MemoryRecord, ModelValidationError, NodeRecord, ValidationReport
 from .paths import REQUIRED_DIRS, WorkspacePaths
-
 
 SHARED_AUTHORITIES = {"candidate", "reviewed", "published"}
 
@@ -35,7 +32,9 @@ def validate_workspace(root: Path) -> ValidationReport:
     for rel in REQUIRED_DIRS:
         path = paths.root / rel
         if not path.exists():
-            report.add_error("workspace.required_dir_missing", f"Missing required directory: {rel}", str(path))
+            report.add_error(
+                "workspace.required_dir_missing", f"Missing required directory: {rel}", str(path)
+            )
 
     nodes: dict[str, NodeRecord] = {}
     for path, data in _load_frontmatter_records(list(paths.graph_nodes.rglob("*.md"))):
@@ -74,7 +73,9 @@ def validate_workspace(root: Path) -> ValidationReport:
         try:
             record = MemoryRecord.model_validate(data)
             if record.id in seen_record_ids:
-                report.add_error("memory.duplicate_id", f"Duplicate memory id {record.id}", str(path))
+                report.add_error(
+                    "memory.duplicate_id", f"Duplicate memory id {record.id}", str(path)
+                )
             seen_record_ids[record.id] = path
             if record.node and record.node not in nodes:
                 report.add_error(
@@ -88,7 +89,9 @@ def validate_workspace(root: Path) -> ValidationReport:
                     f"Memory {record.id} references missing edge {record.edge}",
                     str(path),
                 )
-            validate_memory_guardrails(path=path, data=data, body=read_markdown(path).body, report=report)
+            validate_memory_guardrails(
+                path=path, data=data, body=read_markdown(path).body, report=report
+            )
         except ModelValidationError as exc:
             report.add_error("memory.invalid_record", str(exc), str(path))
 
@@ -125,8 +128,9 @@ def _detect_sync_conflicts(paths: WorkspacePaths, report: ValidationReport) -> N
             continue
         lower = path.name.lower()
         if any(marker in lower for marker in markers):
-            report.add_error("workspace.sync_conflict", "Potential sync conflict file detected", str(path))
-
+            report.add_error(
+                "workspace.sync_conflict", "Potential sync conflict file detected", str(path)
+            )
 
 
 def _validate_generated_artifacts(paths: WorkspacePaths, report: ValidationReport) -> None:

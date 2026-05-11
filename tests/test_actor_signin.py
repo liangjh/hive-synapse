@@ -38,7 +38,9 @@ class ActorSigninTests(unittest.TestCase):
             pack_text = Path(payload["context_pack"]).read_text(encoding="utf-8")
             self.assertIn("Parent Context: org", pack_text)
             self.assertIn("Target Context", pack_text)
-            self.assertIn("Shared Edge Context: engineering__marketing__project-launch-x", pack_text)
+            self.assertIn(
+                "Shared Edge Context: engineering__marketing__project-launch-x", pack_text
+            )
             self.assertIn("Load context pack", payload["bootstrap"])
 
             record = load_yaml(Path(payload["signin_path"]))
@@ -68,7 +70,9 @@ class ActorSigninTests(unittest.TestCase):
             self.assertEqual(signin["effective_node"], "departments/marketing")
             self.assertEqual(signin["role"], "observer")
             self.assertIsNone(signin["assignment"])
-            self.assertEqual(signin["personal_memory_home"], "memory/records/agents/agent_adhoc-research-001/")
+            self.assertEqual(
+                signin["personal_memory_home"], "memory/records/agents/agent_adhoc-research-001/"
+            )
             self.assertTrue((workspace / signin["personal_memory_home"]).is_dir())
 
     def test_actor_refresh_updates_existing_signin_context(self) -> None:

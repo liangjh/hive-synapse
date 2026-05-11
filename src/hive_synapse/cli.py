@@ -7,17 +7,26 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
+from .archive import archive_sweep
 from .backup import create_backup, rollback_preview
 from .charters import ensure_charter, list_charters, read_charter, update_charter
 from .compaction import compact_edge, compact_node
 from .connectors import list_connectors
 from .context import compile_context_pack, context_impact, invalidate_context
-from .edges import archive_edge, create_edge as create_graph_edge, list_edges, restore_edge
+from .edges import archive_edge, list_edges, restore_edge
+from .edges import create_edge as create_graph_edge
 from .errors import HiveError
 from .guardrails import dirty_markers_for_target
 from .imports import add_import, classify_import, compact_import, fetch_import, propose_import
-from .archive import archive_sweep
 from .jobs import claim_job, complete_job, enqueue_job, fail_job, list_jobs, run_next_job
+from .lifecycle import (
+    archive_actor,
+    archive_node,
+    assign_actor,
+    create_node,
+    move_node,
+    restore_node,
+)
 from .llm import (
     add_credential,
     add_profile,
@@ -28,19 +37,31 @@ from .llm import (
     list_providers,
 )
 from .mcp import call_tool, list_tools, serve_json_lines
-from .sessions import refresh_signin, sign_in_actor
-from .lifecycle import archive_actor, archive_node, assign_actor, create_node, move_node, restore_node
-from .promotion import apply_proposal, list_proposals, reject_proposal, review_proposal, sweep_promotability
-from .skills import list_skills, register_skill, update_skill_status
-from .upgrade import doctor, list_migrations, migration_apply, migration_dry_run, template_apply_new, template_diff
-from .watchdog import watchdog_report
 from .operations import list_operations, show_operation
 from .paths import WorkspacePaths
 from .persistence import list_backends
-from .scheduler import install_scheduler
 from .policies import explain_operation_policy
-from .workspace import create_workspace
+from .promotion import (
+    apply_proposal,
+    list_proposals,
+    reject_proposal,
+    review_proposal,
+    sweep_promotability,
+)
+from .scheduler import install_scheduler
+from .sessions import refresh_signin, sign_in_actor
+from .skills import list_skills, register_skill, update_skill_status
+from .upgrade import (
+    doctor,
+    list_migrations,
+    migration_apply,
+    migration_dry_run,
+    template_apply_new,
+    template_diff,
+)
 from .validator import validate_workspace
+from .watchdog import watchdog_report
+from .workspace import create_workspace
 
 
 def _print_json(data: Any) -> None:
@@ -79,7 +100,11 @@ def _cmd_llm_providers(args: argparse.Namespace) -> int:
         _print_json(result)
     else:
         for provider in result["providers"]:
-            dependency = f" dependency={provider['requires_dependency']}" if provider.get("requires_dependency") else ""
+            dependency = (
+                f" dependency={provider['requires_dependency']}"
+                if provider.get("requires_dependency")
+                else ""
+            )
             network = "network" if provider.get("network") else "offline"
             print(f"{provider['name']} ({network}{dependency}): {provider['description']}")
     return 0
@@ -197,7 +222,6 @@ def _cmd_validate(args: argparse.Namespace) -> int:
     return 0 if report.ok else 1
 
 
-
 def _cmd_charter_init(args: argparse.Namespace) -> int:
     result = ensure_charter(Path(args.workspace), args.target, actor=args.actor, title=args.title)
     if args.json:
@@ -246,16 +270,21 @@ def _cmd_charter_update(args: argparse.Namespace) -> int:
         print(f"Updated charter {args.target}: {args.section}")
     return 0
 
+
 def _cmd_context_compile(args: argparse.Namespace) -> int:
     pack_path, manifest_path = compile_context_pack(Path(args.workspace), args.target)
-    result = {"ok": True, "pack": str(pack_path), "manifest": str(manifest_path), "target": args.target}
+    result = {
+        "ok": True,
+        "pack": str(pack_path),
+        "manifest": str(manifest_path),
+        "target": args.target,
+    }
     if args.json:
         _print_json(result)
     else:
         print(f"Compiled context pack: {pack_path}")
         print(f"Manifest: {manifest_path}")
     return 0
-
 
 
 def _cmd_context_status(args: argparse.Namespace) -> int:
@@ -278,7 +307,6 @@ def _cmd_context_status(args: argparse.Namespace) -> int:
         else:
             print(f"Context fresh for {args.target}")
     return 1 if markers else 0
-
 
 
 def _cmd_context_impacted(args: argparse.Namespace) -> int:
@@ -323,7 +351,9 @@ def _cmd_import_add(args: argparse.Namespace) -> int:
 
 
 def _cmd_import_fetch(args: argparse.Namespace) -> int:
-    result = fetch_import(Path(args.workspace), args.target, args.url, connector=args.connector, actor=args.actor)
+    result = fetch_import(
+        Path(args.workspace), args.target, args.url, connector=args.connector, actor=args.actor
+    )
     if args.json:
         _print_json(result)
     else:
@@ -410,7 +440,9 @@ def _cmd_promote_apply(args: argparse.Namespace) -> int:
 
 
 def _cmd_promote_reject(args: argparse.Namespace) -> int:
-    result = reject_proposal(Path(args.workspace), args.proposal_id, actor=args.actor, rationale=args.rationale)
+    result = reject_proposal(
+        Path(args.workspace), args.proposal_id, actor=args.actor, rationale=args.rationale
+    )
     if args.json:
         _print_json(result)
     else:
@@ -437,7 +469,9 @@ def _cmd_promote_sweep(args: argparse.Namespace) -> int:
 
 
 def _cmd_job_enqueue(args: argparse.Namespace) -> int:
-    result = enqueue_job(Path(args.workspace), args.type, args.target, reason=args.reason, actor=args.actor)
+    result = enqueue_job(
+        Path(args.workspace), args.type, args.target, reason=args.reason, actor=args.actor
+    )
     if args.json:
         _print_json(result)
     else:
@@ -508,7 +542,14 @@ def _cmd_job_watchdog(args: argparse.Namespace) -> int:
 
 
 def _cmd_node_create(args: argparse.Namespace) -> int:
-    result = create_node(Path(args.workspace), args.node_id, kind=args.kind, title=args.title, parents=args.parent, actor=args.actor)
+    result = create_node(
+        Path(args.workspace),
+        args.node_id,
+        kind=args.kind,
+        title=args.title,
+        parents=args.parent,
+        actor=args.actor,
+    )
     if args.json:
         _print_json(result)
     else:
@@ -526,7 +567,13 @@ def _cmd_node_move(args: argparse.Namespace) -> int:
 
 
 def _cmd_node_archive(args: argparse.Namespace) -> int:
-    result = archive_node(Path(args.workspace), args.node_id, actor=args.actor, reason=args.reason, defer_compaction=args.defer_compaction)
+    result = archive_node(
+        Path(args.workspace),
+        args.node_id,
+        actor=args.actor,
+        reason=args.reason,
+        defer_compaction=args.defer_compaction,
+    )
     if args.json:
         _print_json(result)
     else:
@@ -571,7 +618,9 @@ def _cmd_edge_create(args: argparse.Namespace) -> int:
 
 
 def _cmd_edge_list(args: argparse.Namespace) -> int:
-    result = list_edges(Path(args.workspace), node=args.node, include_archived=args.include_archived)
+    result = list_edges(
+        Path(args.workspace), node=args.node, include_archived=args.include_archived
+    )
     if args.json:
         _print_json(result)
     else:
@@ -609,7 +658,13 @@ def _cmd_edge_compact(args: argparse.Namespace) -> int:
 
 
 def _cmd_actor_assign(args: argparse.Namespace) -> int:
-    result = assign_actor(Path(args.workspace), args.actor_id, home_node=args.home_node, role=args.role, actor=args.actor)
+    result = assign_actor(
+        Path(args.workspace),
+        args.actor_id,
+        home_node=args.home_node,
+        role=args.role,
+        actor=args.actor,
+    )
     if args.json:
         _print_json(result)
     else:
@@ -618,7 +673,9 @@ def _cmd_actor_assign(args: argparse.Namespace) -> int:
 
 
 def _cmd_actor_archive(args: argparse.Namespace) -> int:
-    result = archive_actor(Path(args.workspace), args.actor_id, actor=args.actor, reason=args.reason)
+    result = archive_actor(
+        Path(args.workspace), args.actor_id, actor=args.actor, reason=args.reason
+    )
     if args.json:
         _print_json(result)
     else:
@@ -653,7 +710,15 @@ def _cmd_actor_refresh(args: argparse.Namespace) -> int:
 
 
 def _cmd_skill_register(args: argparse.Namespace) -> int:
-    result = register_skill(Path(args.workspace), args.skill_id, title=args.title, scope=args.scope, trigger=args.trigger, permission_profile=args.permission_profile, actor=args.actor)
+    result = register_skill(
+        Path(args.workspace),
+        args.skill_id,
+        title=args.title,
+        scope=args.scope,
+        trigger=args.trigger,
+        permission_profile=args.permission_profile,
+        actor=args.actor,
+    )
     if args.json:
         _print_json(result)
     else:
@@ -662,7 +727,9 @@ def _cmd_skill_register(args: argparse.Namespace) -> int:
 
 
 def _cmd_skill_list(args: argparse.Namespace) -> int:
-    result = list_skills(Path(args.workspace), scope=args.scope, include_archived=args.include_archived)
+    result = list_skills(
+        Path(args.workspace), scope=args.scope, include_archived=args.include_archived
+    )
     if args.json:
         _print_json(result)
     else:
@@ -672,7 +739,13 @@ def _cmd_skill_list(args: argparse.Namespace) -> int:
 
 
 def _cmd_skill_status(args: argparse.Namespace) -> int:
-    result = update_skill_status(Path(args.workspace), args.skill_id, status=args.status, actor=args.actor, reason=args.reason)
+    result = update_skill_status(
+        Path(args.workspace),
+        args.skill_id,
+        status=args.status,
+        actor=args.actor,
+        reason=args.reason,
+    )
     if args.json:
         _print_json(result)
     else:
@@ -738,13 +811,14 @@ def _cmd_upgrade_template_diff(args: argparse.Namespace) -> int:
 
 
 def _cmd_upgrade_template_apply_new(args: argparse.Namespace) -> int:
-    result = template_apply_new(Path(args.workspace), Path(__file__).resolve().parents[2], actor=args.actor)
+    result = template_apply_new(
+        Path(args.workspace), Path(__file__).resolve().parents[2], actor=args.actor
+    )
     if args.json:
         _print_json(result)
     else:
         print(f"Applied new template files: {len(result['changed_files'])}")
     return 0
-
 
 
 def _cmd_connector_list(args: argparse.Namespace) -> int:
@@ -810,7 +884,10 @@ def _cmd_operation_list(args: argparse.Namespace) -> int:
         _print_json(result)
     else:
         for operation in result["operations"]:
-            print(f"{operation['id']} {operation.get('type')} {operation.get('actor')} {operation.get('started_at')}")
+            print(
+                f"{operation['id']} {operation.get('type')} "
+                f"{operation.get('actor')} {operation.get('started_at')}"
+            )
     return 0
 
 
@@ -853,6 +930,7 @@ def _cmd_mcp_serve(args: argparse.Namespace) -> int:
     del args
     return serve_json_lines()
 
+
 def _cmd_backup_create(args: argparse.Namespace) -> int:
     backup_dir, manifest_path, operation = create_backup(Path(args.path), actor=args.actor)
     result = {
@@ -882,6 +960,7 @@ def _cmd_rollback_preview(args: argparse.Namespace) -> int:
             print(result.get("message", "Rollback preview failed"), file=sys.stderr)
     return 0 if result.get("ok") else 1
 
+
 def _cmd_reserved(args: argparse.Namespace) -> int:
     message = f"Command group '{args.command}' is reserved and not implemented in this slice."
     if getattr(args, "json", False):
@@ -908,10 +987,14 @@ def build_parser() -> argparse.ArgumentParser:
     validate_parser.add_argument("--json", action="store_true")
     validate_parser.set_defaults(func=_cmd_validate)
 
-    llm_parser = subparsers.add_parser("llm", help="LLM provider, profile, and credential operations")
+    llm_parser = subparsers.add_parser(
+        "llm", help="LLM provider, profile, and credential operations"
+    )
     llm_subparsers = llm_parser.add_subparsers(dest="llm_command", required=True)
 
-    llm_init = llm_subparsers.add_parser("init", help="Create default LLM policy and credential registry files")
+    llm_init = llm_subparsers.add_parser(
+        "init", help="Create default LLM policy and credential registry files"
+    )
     llm_init.add_argument("--workspace", default=".")
     llm_init.add_argument("--actor", default="system:llm")
     llm_init.add_argument("--json", action="store_true")
@@ -927,8 +1010,12 @@ def build_parser() -> argparse.ArgumentParser:
     llm_config.set_defaults(func=_cmd_llm_config)
 
     llm_credential = llm_subparsers.add_parser("credential", help="Manage LLM credentials")
-    llm_credential_subparsers = llm_credential.add_subparsers(dest="llm_credential_command", required=True)
-    llm_credential_add = llm_credential_subparsers.add_parser("add", help="Add or update an LLM credential")
+    llm_credential_subparsers = llm_credential.add_subparsers(
+        dest="llm_credential_command", required=True
+    )
+    llm_credential_add = llm_credential_subparsers.add_parser(
+        "add", help="Add or update an LLM credential"
+    )
     llm_credential_add.add_argument("credential_id")
     llm_credential_add.add_argument("--workspace", default=".")
     llm_credential_add.add_argument("--provider", required=True)
@@ -939,7 +1026,9 @@ def build_parser() -> argparse.ArgumentParser:
     llm_credential_add.add_argument("--json", action="store_true")
     llm_credential_add.set_defaults(func=_cmd_llm_credential_add)
 
-    llm_credential_assign = llm_credential_subparsers.add_parser("assign", help="Assign a credential to an actor or organization")
+    llm_credential_assign = llm_credential_subparsers.add_parser(
+        "assign", help="Assign a credential to an actor or organization"
+    )
     llm_credential_assign.add_argument("credential_id", help="Credential id, or 'none'")
     llm_credential_assign.add_argument("--workspace", default=".")
     llm_credential_assign.add_argument("--actor", default="system:llm")
@@ -957,7 +1046,9 @@ def build_parser() -> argparse.ArgumentParser:
     llm_profile_add.add_argument("--model", required=True)
     llm_profile_add.add_argument("--base-url")
     llm_profile_add.add_argument("--credential")
-    llm_profile_add.add_argument("--command-json", help="JSON argv array for command provider profiles")
+    llm_profile_add.add_argument(
+        "--command-json", help="JSON argv array for command provider profiles"
+    )
     llm_profile_add.add_argument("--temperature", type=float)
     llm_profile_add.add_argument("--max-output-tokens", type=int)
     llm_profile_add.add_argument("--actor", default="system:llm")
@@ -968,7 +1059,9 @@ def build_parser() -> argparse.ArgumentParser:
     llm_profile_add.add_argument("--json", action="store_true")
     llm_profile_add.set_defaults(func=_cmd_llm_profile_add)
 
-    llm_profile_assign = llm_profile_subparsers.add_parser("assign", help="Assign a profile to an actor or organization")
+    llm_profile_assign = llm_profile_subparsers.add_parser(
+        "assign", help="Assign a profile to an actor or organization"
+    )
     llm_profile_assign.add_argument("profile_id", help="Profile id, such as deterministic")
     llm_profile_assign.add_argument("--workspace", default=".")
     llm_profile_assign.add_argument("--actor", default="system:llm")
@@ -999,10 +1092,16 @@ def build_parser() -> argparse.ArgumentParser:
     charter_list.add_argument("--json", action="store_true")
     charter_list.set_defaults(func=_cmd_charter_list)
 
-    charter_update = charter_subparsers.add_parser("update", help="Append or replace a charter section")
+    charter_update = charter_subparsers.add_parser(
+        "update", help="Append or replace a charter section"
+    )
     charter_update.add_argument("target")
     charter_update.add_argument("--workspace", default=".")
-    charter_update.add_argument("--section", choices=["mission", "goals", "tone", "soul", "principles", "notes"], required=True)
+    charter_update.add_argument(
+        "--section",
+        choices=["mission", "goals", "tone", "soul", "principles", "notes"],
+        required=True,
+    )
     charter_update.add_argument("--text", required=True)
     charter_update.add_argument("--mode", choices=["append", "replace"], default="append")
     charter_update.add_argument("--actor", required=True)
@@ -1018,7 +1117,9 @@ def build_parser() -> argparse.ArgumentParser:
     compile_parser.add_argument("--json", action="store_true")
     compile_parser.set_defaults(func=_cmd_context_compile)
 
-    status_parser = context_subparsers.add_parser("status", help="Check whether target context is fresh")
+    status_parser = context_subparsers.add_parser(
+        "status", help="Check whether target context is fresh"
+    )
     status_parser.add_argument("target")
     status_parser.add_argument("--workspace", default=".")
     status_parser.add_argument("--json", action="store_true")
@@ -1030,7 +1131,9 @@ def build_parser() -> argparse.ArgumentParser:
     impacted_parser.add_argument("--json", action="store_true")
     impacted_parser.set_defaults(func=_cmd_context_impacted)
 
-    invalidate_parser = context_subparsers.add_parser("invalidate", help="Write context dirty markers")
+    invalidate_parser = context_subparsers.add_parser(
+        "invalidate", help="Write context dirty markers"
+    )
     invalidate_parser.add_argument("target")
     invalidate_parser.add_argument("--workspace", default=".")
     invalidate_parser.add_argument("--reason", required=True)
@@ -1057,7 +1160,9 @@ def build_parser() -> argparse.ArgumentParser:
     import_fetch.add_argument("target")
     import_fetch.add_argument("url")
     import_fetch.add_argument("--workspace", default=".")
-    import_fetch.add_argument("--connector", choices=["local", "obsidian", "url", "git", "github", "notion", "gdrive"])
+    import_fetch.add_argument(
+        "--connector", choices=["local", "obsidian", "url", "git", "github", "notion", "gdrive"]
+    )
     import_fetch.add_argument("--actor", default="system:import")
     import_fetch.add_argument("--json", action="store_true")
     import_fetch.set_defaults(func=_cmd_import_fetch)
@@ -1071,7 +1176,9 @@ def build_parser() -> argparse.ArgumentParser:
     import_classify.add_argument("--json", action="store_true")
     import_classify.set_defaults(func=_cmd_import_classify)
 
-    import_compact = import_subparsers.add_parser("compact", help="Compact an import into candidate memory")
+    import_compact = import_subparsers.add_parser(
+        "compact", help="Compact an import into candidate memory"
+    )
     import_compact.add_argument("import_id")
     import_compact.add_argument("--workspace", default=".")
     import_compact.add_argument("--actor", default="system:import")
@@ -1079,7 +1186,9 @@ def build_parser() -> argparse.ArgumentParser:
     import_compact.add_argument("--json", action="store_true")
     import_compact.set_defaults(func=_cmd_import_compact)
 
-    import_propose = import_subparsers.add_parser("propose", help="Create promotion proposals for an import")
+    import_propose = import_subparsers.add_parser(
+        "propose", help="Create promotion proposals for an import"
+    )
     import_propose.add_argument("import_id")
     import_propose.add_argument("--workspace", default=".")
     import_propose.add_argument("--actor", default="system:import")
@@ -1118,7 +1227,9 @@ def build_parser() -> argparse.ArgumentParser:
     promote_reject.add_argument("--json", action="store_true")
     promote_reject.set_defaults(func=_cmd_promote_reject)
 
-    promote_sweep = promote_subparsers.add_parser("sweep", help="Sweep candidates for promotability")
+    promote_sweep = promote_subparsers.add_parser(
+        "sweep", help="Sweep candidates for promotability"
+    )
     promote_sweep.add_argument("--workspace", default=".")
     promote_sweep.add_argument("--create-proposals", action="store_true", default=None)
     promote_sweep.add_argument("--actor", default="system:sweep")
@@ -1222,7 +1333,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     edge_parser = subparsers.add_parser("edge", help="Shared edge lifecycle operations")
     edge_subparsers = edge_parser.add_subparsers(dest="edge_command", required=True)
-    edge_create = edge_subparsers.add_parser("create", help="Create a cross-node shared context edge")
+    edge_create = edge_subparsers.add_parser(
+        "create", help="Create a cross-node shared context edge"
+    )
     edge_create.add_argument("edge_id")
     edge_create.add_argument("--workspace", default=".")
     edge_create.add_argument("--kind", required=True)
@@ -1281,7 +1394,9 @@ def build_parser() -> argparse.ArgumentParser:
     actor_archive_cmd.add_argument("--json", action="store_true")
     actor_archive_cmd.set_defaults(func=_cmd_actor_archive)
 
-    actor_signin_cmd = actor_subparsers.add_parser("signin", help="Sign an actor into a node and emit its context pack")
+    actor_signin_cmd = actor_subparsers.add_parser(
+        "signin", help="Sign an actor into a node and emit its context pack"
+    )
     actor_signin_cmd.add_argument("actor_id")
     actor_signin_cmd.add_argument("--workspace", default=".")
     actor_signin_cmd.add_argument("--home-node")
@@ -1292,7 +1407,9 @@ def build_parser() -> argparse.ArgumentParser:
     actor_signin_cmd.add_argument("--json", action="store_true")
     actor_signin_cmd.set_defaults(func=_cmd_actor_signin)
 
-    actor_refresh_cmd = actor_subparsers.add_parser("refresh", help="Refresh a sign-in context pack")
+    actor_refresh_cmd = actor_subparsers.add_parser(
+        "refresh", help="Refresh a sign-in context pack"
+    )
     actor_refresh_cmd.add_argument("signin_id")
     actor_refresh_cmd.add_argument("--workspace", default=".")
     actor_refresh_cmd.add_argument("--actor")
@@ -1321,7 +1438,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     skill_status_cmd = skill_subparsers.add_parser("status", help="Update skill status")
     skill_status_cmd.add_argument("skill_id")
-    skill_status_cmd.add_argument("status", choices=["active", "deprecated", "archived", "restored"])
+    skill_status_cmd.add_argument(
+        "status", choices=["active", "deprecated", "archived", "restored"]
+    )
     skill_status_cmd.add_argument("--workspace", default=".")
     skill_status_cmd.add_argument("--actor", required=True)
     skill_status_cmd.add_argument("--reason", required=True)
@@ -1337,7 +1456,9 @@ def build_parser() -> argparse.ArgumentParser:
     archive_sweep_cmd.add_argument("--json", action="store_true")
     archive_sweep_cmd.set_defaults(func=_cmd_archive_sweep)
 
-    upgrade_parser = subparsers.add_parser("upgrade", help="Doctor, migration, and template operations")
+    upgrade_parser = subparsers.add_parser(
+        "upgrade", help="Doctor, migration, and template operations"
+    )
     upgrade_subparsers = upgrade_parser.add_subparsers(dest="upgrade_command", required=True)
     upgrade_doctor = upgrade_subparsers.add_parser("doctor", help="Check workspace health")
     upgrade_doctor.add_argument("--workspace", default=".")
@@ -1350,25 +1471,33 @@ def build_parser() -> argparse.ArgumentParser:
     upgrade_migration_list.add_argument("--json", action="store_true")
     upgrade_migration_list.set_defaults(func=_cmd_upgrade_migration_list)
 
-    upgrade_migration_dry = upgrade_subparsers.add_parser("migration-dry-run", help="Dry-run a migration")
+    upgrade_migration_dry = upgrade_subparsers.add_parser(
+        "migration-dry-run", help="Dry-run a migration"
+    )
     upgrade_migration_dry.add_argument("migration_id")
     upgrade_migration_dry.add_argument("--workspace", default=".")
     upgrade_migration_dry.add_argument("--json", action="store_true")
     upgrade_migration_dry.set_defaults(func=_cmd_upgrade_migration_dry_run)
 
-    upgrade_migration_apply = upgrade_subparsers.add_parser("migration-apply", help="Apply a migration")
+    upgrade_migration_apply = upgrade_subparsers.add_parser(
+        "migration-apply", help="Apply a migration"
+    )
     upgrade_migration_apply.add_argument("migration_id")
     upgrade_migration_apply.add_argument("--workspace", default=".")
     upgrade_migration_apply.add_argument("--actor", default="system:migration")
     upgrade_migration_apply.add_argument("--json", action="store_true")
     upgrade_migration_apply.set_defaults(func=_cmd_upgrade_migration_apply)
 
-    upgrade_template_diff = upgrade_subparsers.add_parser("template-diff", help="Diff runtime templates")
+    upgrade_template_diff = upgrade_subparsers.add_parser(
+        "template-diff", help="Diff runtime templates"
+    )
     upgrade_template_diff.add_argument("--workspace", default=".")
     upgrade_template_diff.add_argument("--json", action="store_true")
     upgrade_template_diff.set_defaults(func=_cmd_upgrade_template_diff)
 
-    upgrade_template_apply = upgrade_subparsers.add_parser("template-apply-new", help="Apply missing runtime templates only")
+    upgrade_template_apply = upgrade_subparsers.add_parser(
+        "template-apply-new", help="Apply missing runtime templates only"
+    )
     upgrade_template_apply.add_argument("--workspace", default=".")
     upgrade_template_apply.add_argument("--actor", default="system:upgrade")
     upgrade_template_apply.add_argument("--json", action="store_true")
@@ -1381,14 +1510,18 @@ def build_parser() -> argparse.ArgumentParser:
     connector_list.set_defaults(func=_cmd_connector_list)
 
     persistence_parser = subparsers.add_parser("persistence", help="Persistence backend registry")
-    persistence_subparsers = persistence_parser.add_subparsers(dest="persistence_command", required=True)
+    persistence_subparsers = persistence_parser.add_subparsers(
+        dest="persistence_command", required=True
+    )
     persistence_list = persistence_subparsers.add_parser("list", help="List persistence backends")
     persistence_list.add_argument("--json", action="store_true")
     persistence_list.set_defaults(func=_cmd_persistence_list)
 
     policy_parser = subparsers.add_parser("policy", help="Inspect effective operation policy")
     policy_subparsers = policy_parser.add_subparsers(dest="policy_command", required=True)
-    policy_show = policy_subparsers.add_parser("show", help="Show workspace or target operation policy")
+    policy_show = policy_subparsers.add_parser(
+        "show", help="Show workspace or target operation policy"
+    )
     policy_show.add_argument("--workspace", default=".")
     policy_show.add_argument("--target")
     policy_show.add_argument("--json", action="store_true")
@@ -1409,9 +1542,13 @@ def build_parser() -> argparse.ArgumentParser:
     mcp_serve = mcp_subparsers.add_parser("serve", help="Serve JSON-line MCP-compatible requests")
     mcp_serve.set_defaults(func=_cmd_mcp_serve)
 
-    scheduler_parser = subparsers.add_parser("scheduler", help="External scheduler template operations")
+    scheduler_parser = subparsers.add_parser(
+        "scheduler", help="External scheduler template operations"
+    )
     scheduler_subparsers = scheduler_parser.add_subparsers(dest="scheduler_command", required=True)
-    scheduler_install = scheduler_subparsers.add_parser("install", help="Write cron or launchd scheduler templates")
+    scheduler_install = scheduler_subparsers.add_parser(
+        "install", help="Write cron or launchd scheduler templates"
+    )
     scheduler_install.add_argument("kind", choices=["cron", "launchd"])
     scheduler_install.add_argument("--workspace", default=".")
     scheduler_install.add_argument("--runtime-command")
@@ -1446,7 +1583,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     rollback_parser = subparsers.add_parser("rollback", help="Rollback operations")
     rollback_subparsers = rollback_parser.add_subparsers(dest="rollback_command", required=True)
-    rollback_preview_parser = rollback_subparsers.add_parser("preview", help="Preview rollback effects")
+    rollback_preview_parser = rollback_subparsers.add_parser(
+        "preview", help="Preview rollback effects"
+    )
     rollback_preview_parser.add_argument("operation_id")
     rollback_preview_parser.add_argument("--workspace", default=".")
     rollback_preview_parser.add_argument("--json", action="store_true")

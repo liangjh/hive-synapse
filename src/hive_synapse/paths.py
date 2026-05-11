@@ -5,7 +5,6 @@ from pathlib import Path
 
 from .errors import WorkspaceError
 
-
 WORKSPACE_CONFIG = "hive.config.yaml"
 
 REQUIRED_DIRS = [

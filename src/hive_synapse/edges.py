@@ -12,7 +12,6 @@ from .ids import new_id, utc_now_iso
 from .operations import OperationLog
 from .paths import WorkspacePaths, target_to_path_fragment
 
-
 EDGE_IMPORT_DIRS = [
     "inbox",
     "fetched",
@@ -43,7 +42,9 @@ def _edge_import_dir(paths: WorkspacePaths, edge_id: str) -> Path:
     return paths.root / "memory" / "imports" / "edges" / target_to_path_fragment(edge_id)
 
 
-def _write_import_workspace(paths: WorkspacePaths, edge_id: str, *, owner: str | None = None) -> Path:
+def _write_import_workspace(
+    paths: WorkspacePaths, edge_id: str, *, owner: str | None = None
+) -> Path:
     root = _edge_import_dir(paths, edge_id)
     for child in EDGE_IMPORT_DIRS:
         (root / child).mkdir(parents=True, exist_ok=True)
@@ -53,7 +54,9 @@ def _write_import_workspace(paths: WorkspacePaths, edge_id: str, *, owner: str |
         "target_type": "edge",
         "status": "active",
         "owner": owner,
-        "paths": {child: str((root / child).relative_to(paths.root)) + "/" for child in EDGE_IMPORT_DIRS},
+        "paths": {
+            child: str((root / child).relative_to(paths.root)) + "/" for child in EDGE_IMPORT_DIRS
+        },
     }
     output = root / "workspace.yaml"
     atomic_write_text(output, yaml.safe_dump(workspace, sort_keys=False))
@@ -94,10 +97,17 @@ def create_edge(
         "history_memory_file": str((memory_dir / "HISTORY.md").relative_to(paths.root)),
         "import_workspace": str(_edge_import_dir(paths, edge_id).relative_to(paths.root)) + "/",
     }
-    atomic_write_text(edge_path, dump_markdown(record, f"# {title}\n\nShared graph edge for `{edge_id}`.\n"))
+    atomic_write_text(
+        edge_path, dump_markdown(record, f"# {title}\n\nShared graph edge for `{edge_id}`.\n")
+    )
     current_body = summary or f"Shared operating context for `{edge_id}`."
-    atomic_write_text(memory_dir / "CURRENT.md", f"# Current Edge Memory: {title}\n\n{current_body.strip()}\n")
-    atomic_write_text(memory_dir / "HISTORY.md", f"# Historical Edge Memory: {title}\n\nCreated {utc_now_iso()} by {actor}.\n")
+    atomic_write_text(
+        memory_dir / "CURRENT.md", f"# Current Edge Memory: {title}\n\n{current_body.strip()}\n"
+    )
+    atomic_write_text(
+        memory_dir / "HISTORY.md",
+        f"# Historical Edge Memory: {title}\n\nCreated {utc_now_iso()} by {actor}.\n",
+    )
     import_workspace = _write_import_workspace(paths, edge_id, owner=actor)
     invalidations = [
         invalidate_context(paths.root, node_id, reason=f"edge_created:{edge_id}", actor=actor)
@@ -120,7 +130,9 @@ def create_edge(
     return {"ok": True, "edge": record, "operation": op.id, "invalidations": invalidations}
 
 
-def list_edges(root: Path, *, node: str | None = None, include_archived: bool = False) -> dict[str, Any]:
+def list_edges(
+    root: Path, *, node: str | None = None, include_archived: bool = False
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     graph = MemoryGraph(paths.root)
@@ -131,11 +143,15 @@ def list_edges(root: Path, *, node: str | None = None, include_archived: bool = 
         if node and node not in edge.nodes:
             continue
         edge_path = _edge_file(paths, edge.id)
-        edges.append({**edge.model_dump(mode="json"), "path": str(edge_path.relative_to(paths.root))})
+        edges.append(
+            {**edge.model_dump(mode="json"), "path": str(edge_path.relative_to(paths.root))}
+        )
     return {"ok": True, "edges": edges}
 
 
-def update_edge_status(root: Path, edge_id: str, *, status: str, actor: str, reason: str | None = None) -> dict[str, Any]:
+def update_edge_status(
+    root: Path, edge_id: str, *, status: str, actor: str, reason: str | None = None
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     edge_path = _edge_file(paths, edge_id)
@@ -154,7 +170,9 @@ def update_edge_status(root: Path, edge_id: str, *, status: str, actor: str, rea
     for node_id in nodes:
         invalidate_context(paths.root, node_id, reason=f"edge_{status}:{edge_id}", actor=actor)
     archive_path: Path | None = None
-    changed_records: list[dict[str, Any]] = [{"id": edge_id, "type": "edge", "old_status": old_status, "status": status}]
+    changed_records: list[dict[str, Any]] = [
+        {"id": edge_id, "type": "edge", "old_status": old_status, "status": status}
+    ]
     changed_files = [{"path": str(edge_path.relative_to(paths.root))}]
     if status == "archived":
         archive_record = {
@@ -181,7 +199,12 @@ def update_edge_status(root: Path, edge_id: str, *, status: str, actor: str, rea
         changed_records=changed_records,
         rollback={"supported": True, "strategy": f"restore_edge_status:{old_status}"},
     )
-    return {"ok": True, "edge": record, "operation": op.id, "archive_path": str(archive_path) if archive_path else None}
+    return {
+        "ok": True,
+        "edge": record,
+        "operation": op.id,
+        "archive_path": str(archive_path) if archive_path else None,
+    }
 
 
 def archive_edge(root: Path, edge_id: str, *, actor: str, reason: str) -> dict[str, Any]:

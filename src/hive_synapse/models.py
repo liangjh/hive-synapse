@@ -54,7 +54,9 @@ class HiveModel:
                 value = kwargs.pop(name)
             elif hasattr(self.__class__, name):
                 default = getattr(self.__class__, name)
-                value = default.build() if isinstance(default, FactoryDefault) else deepcopy(default)
+                value = (
+                    default.build() if isinstance(default, FactoryDefault) else deepcopy(default)
+                )
             elif _allows_none(annotation):
                 value = None
             else:
@@ -73,7 +75,11 @@ class HiveModel:
 
     def model_dump(self, mode: str | None = None) -> dict[str, Any]:
         del mode
-        return {key: _serialize(value) for key, value in self.__dict__.items() if not key.startswith("_")}
+        return {
+            key: _serialize(value)
+            for key, value in self.__dict__.items()
+            if not key.startswith("_")
+        }
 
 
 class SourceRef(HiveModel):

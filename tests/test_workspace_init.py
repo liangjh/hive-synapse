@@ -68,8 +68,7 @@ class WorkspaceInitTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = init_basic_workspace(Path(temp_dir))
             candidate = (
-                workspace
-                / "memory/records/nodes/departments/engineering/candidates/"
+                workspace / "memory/records/nodes/departments/engineering/candidates/"
                 "mem_demo_engineering_practice_001.md"
             )
             edited_text = (

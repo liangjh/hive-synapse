@@ -9,7 +9,6 @@ from .errors import WorkspaceError
 from .fs import atomic_write_text
 from .paths import WorkspacePaths, target_to_path_fragment
 
-
 OPERATION_POLICY_FILE = "operations.yaml"
 
 
@@ -77,7 +76,9 @@ def ensure_operation_policy(paths: WorkspacePaths, *, force: bool = False) -> Pa
     return path
 
 
-def load_operation_policy(root: Path | WorkspacePaths, *, target: str | None = None) -> dict[str, Any]:
+def load_operation_policy(
+    root: Path | WorkspacePaths, *, target: str | None = None
+) -> dict[str, Any]:
     paths = _coerce_paths(root)
     policy = default_operation_policy()
     workspace_path = operation_policy_path(paths)

@@ -15,7 +15,15 @@ from .paths import WorkspacePaths
 from .promotion import sweep_promotability
 
 
-def enqueue_job(root: Path, job_type: str, target: str, *, reason: str, inputs: dict[str, Any] | None = None, actor: str = "system:job") -> dict[str, Any]:
+def enqueue_job(
+    root: Path,
+    job_type: str,
+    target: str,
+    *,
+    reason: str,
+    inputs: dict[str, Any] | None = None,
+    actor: str = "system:job",
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     job_id = new_id("job")
@@ -89,14 +97,20 @@ def claim_job(root: Path, *, runner: str = "runner:local") -> dict[str, Any]:
 
 def _find_job(paths: WorkspacePaths, job_id: str) -> tuple[Path, dict[str, Any], str]:
     for status, directory in _job_dirs(paths).items():
-        matches = [path for path in sorted(directory.glob("*.yaml")) if path.stem == job_id or job_id in path.stem]
+        matches = [
+            path
+            for path in sorted(directory.glob("*.yaml"))
+            if path.stem == job_id or job_id in path.stem
+        ]
         if matches:
             path = matches[0]
             return path, yaml.safe_load(path.read_text(encoding="utf-8")) or {}, status
     raise FileNotFoundError(job_id)
 
 
-def complete_job(root: Path, job_id: str, *, result: dict[str, Any] | None = None, actor: str = "system:job") -> dict[str, Any]:
+def complete_job(
+    root: Path, job_id: str, *, result: dict[str, Any] | None = None, actor: str = "system:job"
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     path, job, _status = _find_job(paths, job_id)
@@ -169,7 +183,9 @@ def run_next_job(root: Path, *, runner: str = "runner:local") -> dict[str, Any]:
         elif job_type in {"archive_sweep", "active_signin_refresh_check"}:
             result = {"status": "no_changes", "handler": job_type}
         else:
-            return fail_job(root, job_id, reason=f"No handler for job type {job_type}", actor=runner)
+            return fail_job(
+                root, job_id, reason=f"No handler for job type {job_type}", actor=runner
+            )
         return complete_job(root, job_id, result=result, actor=runner)
     except Exception as exc:
         return fail_job(root, job_id, reason=str(exc), actor=runner)

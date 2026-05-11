@@ -199,7 +199,9 @@ def add_credential(
     if organization_default:
         registry["organization_credential"] = credential_id
     if assign_actor:
-        _upsert_actor_choice(registry, "actor_credentials", assign_actor, "credential", credential_id)
+        _upsert_actor_choice(
+            registry, "actor_credentials", assign_actor, "credential", credential_id
+        )
     path = _credentials_path(paths)
     atomic_write_text(path, yaml.safe_dump(registry, sort_keys=False))
     operation = OperationLog(paths).append(
@@ -228,16 +230,23 @@ def assign_credential(
     organization_default: bool = False,
 ) -> dict[str, Any]:
     if not assign_actor and not organization_default:
-        raise WorkspaceError("Credential assignment requires --assign-actor or --organization-default")
+        raise WorkspaceError(
+            "Credential assignment requires --assign-actor or --organization-default"
+        )
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     registry = _load_credentials_registry(paths)
-    if credential_id != "none" and _find_by_id(_as_list(registry.get("credentials")), credential_id) is None:
+    if (
+        credential_id != "none"
+        and _find_by_id(_as_list(registry.get("credentials")), credential_id) is None
+    ):
         raise WorkspaceError(f"LLM credential not found: {credential_id}")
     if organization_default:
         registry["organization_credential"] = credential_id
     if assign_actor:
-        _upsert_actor_choice(registry, "actor_credentials", assign_actor, "credential", credential_id)
+        _upsert_actor_choice(
+            registry, "actor_credentials", assign_actor, "credential", credential_id
+        )
     path = _credentials_path(paths)
     atomic_write_text(path, yaml.safe_dump(registry, sort_keys=False))
     operation = OperationLog(paths).append(
@@ -311,7 +320,12 @@ def add_profile(
         changed_records=[{"id": profile_id, "type": "llm_profile"}],
         rollback={"supported": True, "strategy": "restore_llm_policy_from_backup"},
     )
-    return {"ok": True, "profile": _redact_secrets(profile), "policy": _redact_secrets(policy), "operation": operation.id}
+    return {
+        "ok": True,
+        "profile": _redact_secrets(profile),
+        "policy": _redact_secrets(policy),
+        "operation": operation.id,
+    }
 
 
 def assign_profile(
@@ -465,7 +479,11 @@ class DeterministicProvider:
         text = "\n\n".join(message.get("content", "") for message in request.messages)
         if request.task == "import_classify":
             lower = text.lower()
-            topics = [topic for topic in ["policy", "practice", "project", "decision", "risk", "skill"] if topic in lower]
+            topics = [
+                topic
+                for topic in ["policy", "practice", "project", "decision", "risk", "skill"]
+                if topic in lower
+            ]
             output = {
                 "topics": topics or ["general"],
                 "temporal_status": "historical" if "deprecated" in lower else "current",
@@ -503,7 +521,9 @@ class OpenAICompatibleProvider:
         profile = request.profile
         model = str(profile.get("model") or "")
         if not model:
-            raise WorkspaceError(f"{profile.get('provider', 'openai_compatible')} profile requires a model")
+            raise WorkspaceError(
+                f"{profile.get('provider', 'openai_compatible')} profile requires a model"
+            )
         base_url = str(profile.get("base_url") or self.default_base_url).rstrip("/")
         url = f"{base_url}/chat/completions"
         payload = {
@@ -557,7 +577,9 @@ class AnthropicProvider:
         headers["anthropic-version"] = str(profile.get("anthropic_version", "2023-06-01"))
         data = _post_json(f"{base_url}/v1/messages", payload, headers)
         content_blocks = data.get("content") or []
-        content = "\n".join(str(block.get("text", "")) for block in content_blocks if isinstance(block, dict))
+        content = "\n".join(
+            str(block.get("text", "")) for block in content_blocks if isinstance(block, dict)
+        )
         return ModelResponse(
             content=content,
             output_json=_parse_json_object(content),
@@ -719,7 +741,9 @@ def _resolve_profile(
                 profile_id = str(entry.get("profile"))
                 break
     if not profile_id:
-        profile_id = str(policy.get("organization_profile") or policy.get("default_profile") or "deterministic")
+        profile_id = str(
+            policy.get("organization_profile") or policy.get("default_profile") or "deterministic"
+        )
     profile = _find_by_id(profiles, profile_id)
     if profile is None:
         raise WorkspaceError(f"LLM profile not found: {profile_id}")
@@ -790,7 +814,9 @@ def _auth_headers(request: ModelRequest) -> dict[str, str]:
 
 
 def _api_key(request: ModelRequest) -> str | None:
-    api_key_env = (request.credential or {}).get("api_key_env") or request.profile.get("api_key_env")
+    api_key_env = (request.credential or {}).get("api_key_env") or request.profile.get(
+        "api_key_env"
+    )
     if not api_key_env:
         return None
     value = os.environ.get(str(api_key_env))

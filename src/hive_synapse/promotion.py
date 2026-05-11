@@ -6,7 +6,7 @@ from typing import Any
 from . import simple_yaml as yaml
 from .context import invalidate_context
 from .errors import WorkspaceError
-from .frontmatter import dump_markdown, read_markdown, write_markdown
+from .frontmatter import read_markdown, write_markdown
 from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
 from .llm import generate_structured, input_hash_for_path, should_use_model, write_model_run
@@ -46,7 +46,11 @@ def _write_yaml(path: Path, data: dict[str, Any]) -> None:
 
 
 def _load_proposal(paths: WorkspacePaths, proposal_id: str) -> tuple[Path, dict[str, Any]]:
-    matches = [path for path in _proposal_paths(paths) if path.stem == proposal_id or proposal_id in path.stem]
+    matches = [
+        path
+        for path in _proposal_paths(paths)
+        if path.stem == proposal_id or proposal_id in path.stem
+    ]
     if not matches:
         raise WorkspaceError(f"Promotion proposal not found: {proposal_id}")
     path = matches[0]
@@ -115,7 +119,9 @@ def list_proposals(root: Path, *, status: str | None = None) -> dict[str, Any]:
     return {"ok": True, "proposals": proposals}
 
 
-def review_proposal(root: Path, proposal_id: str, *, decision: str, actor: str, rationale: str) -> dict[str, Any]:
+def review_proposal(
+    root: Path, proposal_id: str, *, decision: str, actor: str, rationale: str
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     if decision not in {"approved", "rejected"}:
@@ -170,11 +176,19 @@ def apply_proposal(root: Path, proposal_id: str, *, actor: str) -> dict[str, Any
         "applied_by": actor,
         "applied_at": utc_now_iso(),
     }
-    output_dir = paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "published"
+    output_dir = (
+        paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "published"
+    )
     output_path = output_dir / f"{published_id}.md"
     write_markdown(output_path, published, body)
-    current_path = paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "CURRENT.md"
-    current = current_path.read_text(encoding="utf-8") if current_path.exists() else f"# Current Memory: {target}\n"
+    current_path = (
+        paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "CURRENT.md"
+    )
+    current = (
+        current_path.read_text(encoding="utf-8")
+        if current_path.exists()
+        else f"# Current Memory: {target}\n"
+    )
     current_section = f"\n\n## Published Memory: {source['id']}\n\n{body.strip()}\n"
     if f"Published Memory: {source['id']}" not in current:
         atomic_write_text(current_path, current.rstrip() + current_section)
@@ -182,7 +196,9 @@ def apply_proposal(root: Path, proposal_id: str, *, actor: str) -> dict[str, Any
     proposal["applied_at"] = utc_now_iso()
     proposal["applied_by"] = actor
     _write_yaml(proposal_path, proposal)
-    invalidation = invalidate_context(paths.root, target, reason=f"promotion_applied:{proposal_id}", actor=actor)
+    invalidation = invalidate_context(
+        paths.root, target, reason=f"promotion_applied:{proposal_id}", actor=actor
+    )
     operation = OperationLog(paths).append(
         operation_type="promotion_apply",
         actor=actor,
@@ -241,7 +257,11 @@ def sweep_promotability(
         if not data:
             continue
         body_lower = doc.body.lower()
-        record = {"id": data.get("id"), "path": str(path.relative_to(paths.root)), "node": data.get("node")}
+        record = {
+            "id": data.get("id"),
+            "path": str(path.relative_to(paths.root)),
+            "node": data.get("node"),
+        }
         if "conflict" in body_lower or "contradicts" in body_lower:
             conflict_id = new_id("conflict")
             conflict = {
@@ -283,9 +303,10 @@ def sweep_promotability(
                         {
                             "role": "system",
                             "content": (
-                                "Judge whether candidate memory is ready to be proposed for promotion. "
-                                "Return only JSON with recommended, confidence, rationale, risk_flags, "
-                                "missing_evidence, and optional recommended_target_scope. Be conservative "
+                                "Judge whether candidate memory is ready to be proposed "
+                                "for promotion. Return only JSON with recommended, "
+                                "confidence, rationale, risk_flags, missing_evidence, "
+                                "and optional recommended_target_scope. Be conservative "
                                 "when evidence is missing or text appears conflicted."
                             ),
                         },
@@ -305,14 +326,17 @@ def sweep_promotability(
                     "rationale": str(output.get("rationale") or ""),
                     "risk_flags": _string_list(output.get("risk_flags")),
                     "missing_evidence": _string_list(output.get("missing_evidence")),
-                    "recommended_target_scope": output.get("recommended_target_scope") or f"{data.get('node') or 'org'}/published",
+                    "recommended_target_scope": output.get("recommended_target_scope")
+                    or f"{data.get('node') or 'org'}/published",
                     "provider": model_response.provider,
                     "model": model_response.model,
                     "profile": model_request.profile.get("id", "deterministic"),
                     "credential": (model_request.credential or {}).get("id", "none"),
                 }
                 if not advisory["recommended"]:
-                    run = write_model_run(root, request=model_request, response=model_response, status="completed")
+                    run = write_model_run(
+                        root, request=model_request, response=model_response, status="completed"
+                    )
                     advisory["model_run"] = run["record"]["id"]
                     changed_files.append({"path": str(run["path"].relative_to(paths.root))})
                     changed_records.append({"id": run["record"]["id"], "type": "llm_run"})
@@ -325,7 +349,9 @@ def sweep_promotability(
             except WorkspaceError as exc:
                 run_request = model_request
                 if run_request is not None:
-                    run = write_model_run(root, request=run_request, response=None, status="failed", error=str(exc))
+                    run = write_model_run(
+                        root, request=run_request, response=None, status="failed", error=str(exc)
+                    )
                     changed_files.append({"path": str(run["path"].relative_to(paths.root))})
                     changed_records.append({"id": run["record"]["id"], "type": "llm_run"})
                 not_promotable.append({**record, "llm_error": str(exc)})
@@ -353,9 +379,13 @@ def sweep_promotability(
                 "id": proposal_id,
                 "source_record": data.get("id"),
                 "source_scope": f"{node}/candidates",
-                "target_scope": advisory.get("recommended_target_scope") if advisory else f"{node}/published",
+                "target_scope": advisory.get("recommended_target_scope")
+                if advisory
+                else f"{node}/published",
                 "promotion_type": "sweep_candidate_to_node",
-                "rationale": advisory.get("rationale") if advisory and advisory.get("rationale") else "Promotability sweep found source-linked candidate memory.",
+                "rationale": advisory.get("rationale")
+                if advisory and advisory.get("rationale")
+                else "Promotability sweep found source-linked candidate memory.",
                 "status": "candidate",
                 "created_at": utc_now_iso(),
                 "created_by": actor,
@@ -368,12 +398,18 @@ def sweep_promotability(
             changed_records.append({"id": proposal_id, "type": "promotion_proposal"})
             created.append(proposal)
         elif model_request and model_response and advisory:
-            model_run = write_model_run(root, request=model_request, response=model_response, status="completed")
+            model_run = write_model_run(
+                root, request=model_request, response=model_response, status="completed"
+            )
             advisory["model_run"] = model_run["record"]["id"]
             record["llm_advisory"] = advisory
             changed_files.append({"path": str(model_run["path"].relative_to(paths.root))})
             changed_records.append({"id": model_run["record"]["id"], "type": "llm_run"})
-    status = "no_changes" if not any([promotable, needs_more_evidence, conflicts_detected, created]) else "completed"
+    status = (
+        "no_changes"
+        if not any([promotable, needs_more_evidence, conflicts_detected, created])
+        else "completed"
+    )
     report = {
         "ok": True,
         "status": status,

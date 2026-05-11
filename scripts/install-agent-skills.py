@@ -6,7 +6,6 @@ import os
 import shutil
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 CANONICAL_SKILLS = REPO_ROOT / "skills" / "hive"
 CODEX_SKILLS = CANONICAL_SKILLS
@@ -66,10 +65,20 @@ def install_claude(target: Path, *, dry_run: bool) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Install Hive Synapse agent skills/commands from repo-local definitions.")
-    parser.add_argument("adapter", choices=["codex", "claude", "generic", "all"], help="Agent harness adapter to install for.")
-    parser.add_argument("--target", help="Override install target directory. Not supported with adapter=all.")
-    parser.add_argument("--dry-run", action="store_true", help="Print planned installs without writing files.")
+    parser = argparse.ArgumentParser(
+        description="Install Hive Synapse agent skills/commands from repo-local definitions."
+    )
+    parser.add_argument(
+        "adapter",
+        choices=["codex", "claude", "generic", "all"],
+        help="Agent harness adapter to install for.",
+    )
+    parser.add_argument(
+        "--target", help="Override install target directory. Not supported with adapter=all."
+    )
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Print planned installs without writing files."
+    )
     args = parser.parse_args()
 
     adapters = ["codex", "claude", "generic"] if args.adapter == "all" else [args.adapter]

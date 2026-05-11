@@ -12,7 +12,9 @@ class McpAdaptersDocsTests(unittest.TestCase):
     def test_mcp_tools_and_get_context_pack(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             tools = run_hive("mcp", "tools", "--json")
             self.assertEqual(tools.returncode, 0, tools.stderr)
             names = {tool["name"] for tool in json.loads(tools.stdout)["tools"]}

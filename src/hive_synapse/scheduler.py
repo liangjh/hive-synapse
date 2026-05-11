@@ -48,12 +48,20 @@ def install_scheduler(
     if kind == "cron":
         schedule = f"*/{interval_minutes} * * * *"
         output_path = scheduler_dir / "hive-synapse.cron"
+        watchdog_line = (
+            f"{schedule} cd {workspace_q} && {command_fragment} job watchdog "
+            f"--workspace {workspace_q} --enqueue >> {log_q} 2>&1"
+        )
+        run_line = (
+            f"{schedule} cd {workspace_q} && {command_fragment} job run "
+            f"--workspace {workspace_q} --runner runner:scheduler >> {log_q} 2>&1"
+        )
         text = f"""# Hive Synapse scheduler template
 # Generated at {generated_at}
 # Install manually with: (crontab -l 2>/dev/null; cat {shlex.quote(str(output_path))}) | crontab -
 # Workspace: {paths.root}
-{schedule} cd {workspace_q} && {command_fragment} job watchdog --workspace {workspace_q} --enqueue >> {log_q} 2>&1
-{schedule} cd {workspace_q} && {command_fragment} job run --workspace {workspace_q} --runner runner:scheduler >> {log_q} 2>&1
+{watchdog_line}
+{run_line}
 """
         install_hint = f"(crontab -l 2>/dev/null; cat {output_path}) | crontab -"
     else:
@@ -61,8 +69,10 @@ def install_scheduler(
         seconds = interval_minutes * 60
         shell_command = (
             f"cd {workspace_q} && "
-            f"{command_fragment} job watchdog --workspace {workspace_q} --enqueue >> {log_q} 2>&1 && "
-            f"{command_fragment} job run --workspace {workspace_q} --runner runner:scheduler >> {log_q} 2>&1"
+            f"{command_fragment} job watchdog --workspace {workspace_q} --enqueue "
+            f">> {log_q} 2>&1 && "
+            f"{command_fragment} job run --workspace {workspace_q} "
+            f"--runner runner:scheduler >> {log_q} 2>&1"
         )
         text = f"""<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">
@@ -97,7 +107,10 @@ def install_scheduler(
         command=f"hive scheduler install {kind}",
         changed_files=[{"path": str(output_path.relative_to(paths.root))}],
         changed_records=[{"id": f"scheduler_{kind}", "type": "scheduler_template"}],
-        rollback={"supported": True, "strategy": "remove_scheduler_template_or_unload_external_scheduler"},
+        rollback={
+            "supported": True,
+            "strategy": "remove_scheduler_template_or_unload_external_scheduler",
+        },
     )
     return {
         "ok": True,

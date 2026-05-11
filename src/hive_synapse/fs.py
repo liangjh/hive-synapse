@@ -22,7 +22,9 @@ def ensure_within_root(path: Path, root: Path) -> Path:
     try:
         resolved_path.relative_to(resolved_root)
     except ValueError as exc:
-        raise WorkspaceError(f"Path {resolved_path} is outside workspace root {resolved_root}") from exc
+        raise WorkspaceError(
+            f"Path {resolved_path} is outside workspace root {resolved_root}"
+        ) from exc
     return resolved_path
 
 

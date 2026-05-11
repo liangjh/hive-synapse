@@ -32,9 +32,13 @@ class RepositoryGuardrailTests(unittest.TestCase):
     def test_validate_detects_missing_edge_node(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             edge = workspace / "memory/graph/edges/engineering__marketing__project-launch-x.md"
-            edge.write_text(edge.read_text().replace("departments/marketing", "departments/missing"))
+            edge.write_text(
+                edge.read_text().replace("departments/marketing", "departments/missing")
+            )
             result = run_hive("validate", str(workspace), "--json")
             self.assertNotEqual(result.returncode, 0)
             report = json.loads(result.stdout)
@@ -44,7 +48,9 @@ class RepositoryGuardrailTests(unittest.TestCase):
     def test_context_status_reports_dirty_markers(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             result = run_hive(
                 "context",
                 "status",
@@ -61,7 +67,9 @@ class RepositoryGuardrailTests(unittest.TestCase):
     def test_backup_and_rollback_preview(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             backup = run_hive("backup", "create", str(workspace), "--json")
             self.assertEqual(backup.returncode, 0, backup.stderr)
             payload = json.loads(backup.stdout)

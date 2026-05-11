@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
 
@@ -49,7 +48,9 @@ def init_basic_workspace(parent: Path, name: str = "workspace") -> Path:
     workspace = parent / name
     result = run_hive("init", str(workspace), "--fixture", "basic-org", "--json")
     if result.returncode != 0:
-        raise AssertionError(f"hive init failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}")
+        raise AssertionError(
+            f"hive init failed:\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+        )
     output = json_from_stdout(result)
     if output.get("ok") is not True:
         raise AssertionError(f"hive init did not report ok: {output!r}")

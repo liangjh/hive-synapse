@@ -131,8 +131,7 @@ class MemoryGraph:
         for item in affected_targets:
             actors.extend(self.assigned_actors(item))
         pack_paths = [
-            f"memory/generated/context-packs/nodes/{item}/PACK.md"
-            for item in affected_targets
+            f"memory/generated/context-packs/nodes/{item}/PACK.md" for item in affected_targets
         ]
         return GraphImpact(
             target=target,

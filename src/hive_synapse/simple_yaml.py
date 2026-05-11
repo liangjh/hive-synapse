@@ -178,7 +178,7 @@ def _parse_list(lines: list[str], index: int, indent: int) -> tuple[list[Any], i
                 else:
                     item[key.strip()] = None
             while index < len(lines) and _indent(lines[index]) == indent + 2:
-                child_line = lines[index][indent + 2:]
+                child_line = lines[index][indent + 2 :]
                 if child_line.startswith("- ") or ":" not in child_line:
                     break
                 child_key, child_rest = child_line.split(":", 1)
@@ -189,7 +189,9 @@ def _parse_list(lines: list[str], index: int, indent: int) -> tuple[list[Any], i
                 else:
                     index += 1
                     if index < len(lines) and _indent(lines[index]) > indent + 2:
-                        item[child_key.strip()], index = _parse_block(lines, index, _indent(lines[index]))
+                        item[child_key.strip()], index = _parse_block(
+                            lines, index, _indent(lines[index])
+                        )
                     else:
                         item[child_key.strip()] = None
             result.append(item)
@@ -208,7 +210,7 @@ def _parse_scalar(value: str) -> Any:
         return False
     if value in {"[]", "{}"}:
         return [] if value == "[]" else {}
-    if value.startswith(("\"", "[", "{")):
+    if value.startswith(('"', "[", "{")):
         try:
             return json.loads(value)
         except json.JSONDecodeError:

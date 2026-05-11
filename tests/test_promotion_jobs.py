@@ -12,7 +12,9 @@ class PromotionJobTests(unittest.TestCase):
     def test_promote_review_apply_updates_current_and_observes_policy(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             dirty_before = set((workspace / "memory/state/context-dirty").glob("ctxinv_*.yaml"))
             proposal_id = "promotion_demo_001"
             review = run_hive(
@@ -44,7 +46,9 @@ class PromotionJobTests(unittest.TestCase):
             payload = json.loads(apply.stdout)
             self.assertTrue(Path(payload["published_path"]).exists())
             current = workspace / "memory/records/nodes/departments/engineering/CURRENT.md"
-            self.assertIn("Published Memory: mem_demo_engineering_practice_001", current.read_text())
+            self.assertIn(
+                "Published Memory: mem_demo_engineering_practice_001", current.read_text()
+            )
             self.assertIsNone(payload["invalidation"])
             dirty_after = set((workspace / "memory/state/context-dirty").glob("ctxinv_*.yaml"))
             self.assertEqual(dirty_after, dirty_before)
@@ -54,7 +58,9 @@ class PromotionJobTests(unittest.TestCase):
     def test_unauthorized_promotion_apply_fails(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             result = run_hive(
                 "promote",
                 "apply",
@@ -70,18 +76,26 @@ class PromotionJobTests(unittest.TestCase):
     def test_promotability_sweep_can_create_proposals_without_publishing(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
-            result = run_hive("promote", "sweep", "--workspace", str(workspace), "--create-proposals", "--json")
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
+            result = run_hive(
+                "promote", "sweep", "--workspace", str(workspace), "--create-proposals", "--json"
+            )
             self.assertEqual(result.returncode, 0, result.stderr)
             payload = json.loads(result.stdout)
             self.assertTrue(payload["promotable"])
             self.assertTrue(payload["created_proposals"])
-            self.assertFalse((workspace / "memory/records/nodes/departments/engineering/published").exists())
+            self.assertFalse(
+                (workspace / "memory/records/nodes/departments/engineering/published").exists()
+            )
 
     def test_job_queue_claim_run_and_watchdog(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             enqueue = run_hive(
                 "job",
                 "enqueue",
@@ -94,7 +108,9 @@ class PromotionJobTests(unittest.TestCase):
                 "--json",
             )
             self.assertEqual(enqueue.returncode, 0, enqueue.stderr)
-            run = run_hive("job", "run", "--workspace", str(workspace), "--runner", "runner:test", "--json")
+            run = run_hive(
+                "job", "run", "--workspace", str(workspace), "--runner", "runner:test", "--json"
+            )
             self.assertEqual(run.returncode, 0, run.stderr)
             payload = json.loads(run.stdout)
             self.assertEqual(payload["job"]["status"], "completed")

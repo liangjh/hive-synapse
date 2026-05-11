@@ -21,28 +21,53 @@ SECTION_TITLES = {
 
 
 def charter_path(paths: WorkspacePaths, node_id: str) -> Path:
-    return paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(node_id) / "CHARTER.md"
+    return (
+        paths.root
+        / "memory"
+        / "records"
+        / "nodes"
+        / target_to_path_fragment(node_id)
+        / "CHARTER.md"
+    )
 
 
 def charter_history_path(paths: WorkspacePaths, node_id: str) -> Path:
-    return paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(node_id) / "CHARTER_HISTORY.md"
+    return (
+        paths.root
+        / "memory"
+        / "records"
+        / "nodes"
+        / target_to_path_fragment(node_id)
+        / "CHARTER_HISTORY.md"
+    )
 
 
 def default_charter_body(title: str, node_id: str) -> str:
-    return "\n\n".join(
-        [
-            f"# Charter: {title}",
-            "## Mission\n\nArticulate why this node exists and what it is accountable for.",
-            "## Goals\n\n- Maintain a concise current list of goals and priorities.",
-            "## Tone\n\nDescribe the communication style this node should preserve.",
-            "## Soul\n\nCapture the durable personality, values, and cultural intent for this node.",
-            "## Operating Principles\n\n- Prefer source-backed updates and explicit tradeoffs.",
-            f"## Notes\n\nThis charter applies to `{node_id}` and is inherited by descendant context packs.",
-        ]
-    ) + "\n"
+    return (
+        "\n\n".join(
+            [
+                f"# Charter: {title}",
+                "## Mission\n\nArticulate why this node exists and what it is accountable for.",
+                "## Goals\n\n- Maintain a concise current list of goals and priorities.",
+                "## Tone\n\nDescribe the communication style this node should preserve.",
+                (
+                    "## Soul\n\nCapture the durable personality, values, and cultural "
+                    "intent for this node."
+                ),
+                "## Operating Principles\n\n- Prefer source-backed updates and explicit tradeoffs.",
+                (
+                    f"## Notes\n\nThis charter applies to `{node_id}` and is inherited "
+                    "by descendant context packs."
+                ),
+            ]
+        )
+        + "\n"
+    )
 
 
-def _frontmatter(node_id: str, *, actor: str, title: str, source_refs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def _frontmatter(
+    node_id: str, *, actor: str, title: str, source_refs: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
     now = utc_now_iso()
     return {
         "id": f"charter_{node_id.replace('/', '_')}",
@@ -62,13 +87,21 @@ def _frontmatter(node_id: str, *, actor: str, title: str, source_refs: list[dict
     }
 
 
-def ensure_charter(root: Path, node_id: str, *, actor: str, title: str | None = None) -> dict[str, Any]:
+def ensure_charter(
+    root: Path, node_id: str, *, actor: str, title: str | None = None
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     path = charter_path(paths, node_id)
     if path.exists():
         doc = read_markdown(path)
-        return {"ok": True, "created": False, "path": str(path), "frontmatter": doc.frontmatter, "body": doc.body}
+        return {
+            "ok": True,
+            "created": False,
+            "path": str(path),
+            "frontmatter": doc.frontmatter,
+            "body": doc.body,
+        }
     title = title or node_id.split("/")[-1].replace("-", " ").title()
     frontmatter = _frontmatter(node_id, actor=actor, title=title)
     body = default_charter_body(title, node_id)
@@ -76,7 +109,11 @@ def ensure_charter(root: Path, node_id: str, *, actor: str, title: str | None = 
     history = charter_history_path(paths, node_id)
     atomic_write_text(
         history,
-        f"# Charter History: {title}\n\n## {frontmatter['created_at']} — created by {actor}\n\nInitial charter created.\n",
+        (
+            f"# Charter History: {title}\n\n"
+            f"## {frontmatter['created_at']} — created by {actor}\n\n"
+            "Initial charter created.\n"
+        ),
     )
     op = OperationLog(paths).append(
         operation_type="charter_init",
@@ -90,7 +127,14 @@ def ensure_charter(root: Path, node_id: str, *, actor: str, title: str | None = 
         changed_records=[{"id": frontmatter["id"], "type": "charter"}],
         rollback={"supported": True, "strategy": "remove_created_charter"},
     )
-    return {"ok": True, "created": True, "path": str(path), "frontmatter": frontmatter, "body": body, "operation": op.id}
+    return {
+        "ok": True,
+        "created": True,
+        "path": str(path),
+        "frontmatter": frontmatter,
+        "body": body,
+        "operation": op.id,
+    }
 
 
 def read_charter(root: Path, node_id: str) -> dict[str, Any]:
@@ -100,7 +144,13 @@ def read_charter(root: Path, node_id: str) -> dict[str, Any]:
     if not path.exists():
         return {"ok": False, "error": "charter.not_found", "node": node_id, "path": str(path)}
     doc = read_markdown(path)
-    return {"ok": True, "node": node_id, "path": str(path), "frontmatter": doc.frontmatter, "body": doc.body}
+    return {
+        "ok": True,
+        "node": node_id,
+        "path": str(path),
+        "frontmatter": doc.frontmatter,
+        "body": doc.body,
+    }
 
 
 def list_charters(root: Path) -> dict[str, Any]:
@@ -110,7 +160,13 @@ def list_charters(root: Path) -> dict[str, Any]:
     base = paths.root / "memory" / "records" / "nodes"
     for path in sorted(base.rglob("CHARTER.md")):
         doc = read_markdown(path)
-        charters.append({"path": str(path.relative_to(paths.root)), "node": doc.frontmatter.get("node"), "title": doc.frontmatter.get("title")})
+        charters.append(
+            {
+                "path": str(path.relative_to(paths.root)),
+                "node": doc.frontmatter.get("node"),
+                "title": doc.frontmatter.get("title"),
+            }
+        )
     return {"ok": True, "charters": charters}
 
 
@@ -131,11 +187,13 @@ def _replace_section(body: str, section: str, new_text: str, *, mode: str) -> st
         if lines[index].startswith("## "):
             end = index
             break
-    existing = "\n".join(lines[start + 1:end]).strip()
+    existing = "\n".join(lines[start + 1 : end]).strip()
     if mode == "replace":
         section_body = new_text.strip()
     elif mode == "append":
-        section_body = (existing + "\n\n" + new_text.strip()).strip() if existing else new_text.strip()
+        section_body = (
+            (existing + "\n\n" + new_text.strip()).strip() if existing else new_text.strip()
+        )
     else:
         raise ValueError("mode must be append or replace")
     replacement = [heading, "", section_body]
@@ -172,10 +230,13 @@ def update_charter(
     body = _replace_section(doc.body, section, text, mode=mode)
     atomic_write_text(path, dump_markdown(frontmatter, body))
     history_path = charter_history_path(paths, node_id)
-    existing_history = history_path.read_text(encoding="utf-8") if history_path.exists() else f"# Charter History: {node_id}\n"
+    existing_history = (
+        history_path.read_text(encoding="utf-8")
+        if history_path.exists()
+        else f"# Charter History: {node_id}\n"
+    )
     history_entry = (
-        f"\n## {frontmatter['updated_at']} — {mode} `{section}` by {actor}\n\n"
-        f"{text.strip()}\n"
+        f"\n## {frontmatter['updated_at']} — {mode} `{section}` by {actor}\n\n{text.strip()}\n"
     )
     atomic_write_text(history_path, existing_history.rstrip() + history_entry)
     op = OperationLog(paths).append(

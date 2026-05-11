@@ -5,7 +5,6 @@ import unittest
 from pathlib import Path
 
 from hive_synapse import simple_yaml
-
 from tests.support import init_basic_workspace, json_from_stdout, load_yaml, run_hive
 
 

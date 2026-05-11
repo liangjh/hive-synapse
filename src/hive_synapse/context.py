@@ -26,22 +26,35 @@ def _charter_memory(paths: WorkspacePaths, target: str) -> tuple[str, Path]:
 
 
 def _current_memory(paths: WorkspacePaths, target: str) -> tuple[str, Path]:
-    path = paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "CURRENT.md"
+    path = (
+        paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "CURRENT.md"
+    )
     return _read_if_exists(path), path
 
 
 def _node_brief(paths: WorkspacePaths, target: str) -> tuple[str, Path]:
-    path = paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "BRIEF.md"
+    path = (
+        paths.root / "memory" / "records" / "nodes" / target_to_path_fragment(target) / "BRIEF.md"
+    )
     return _read_if_exists(path), path
 
 
 def _edge_memory(paths: WorkspacePaths, edge_id: str) -> tuple[str, Path]:
-    path = paths.root / "memory" / "records" / "edges" / target_to_path_fragment(edge_id) / "CURRENT.md"
+    path = (
+        paths.root
+        / "memory"
+        / "records"
+        / "edges"
+        / target_to_path_fragment(edge_id)
+        / "CURRENT.md"
+    )
     return _read_if_exists(path), path
 
 
 def _edge_brief(paths: WorkspacePaths, edge_id: str) -> tuple[str, Path]:
-    path = paths.root / "memory" / "records" / "edges" / target_to_path_fragment(edge_id) / "BRIEF.md"
+    path = (
+        paths.root / "memory" / "records" / "edges" / target_to_path_fragment(edge_id) / "BRIEF.md"
+    )
     return _read_if_exists(path), path
 
 
@@ -78,40 +91,94 @@ def compile_context_pack(root: Path, target: str) -> tuple[Path, Path]:
         charter_text, charter_source = _charter_memory(paths, parent)
         if charter_text:
             body_parts.append(f"## Parent Charter: {parent}\n\n{charter_text}")
-            sections.append({"name": f"parent_charter:{parent}", "estimated_tokens": len(charter_text.split()), "source": str(charter_source.relative_to(paths.root))})
+            sections.append(
+                {
+                    "name": f"parent_charter:{parent}",
+                    "estimated_tokens": len(charter_text.split()),
+                    "source": str(charter_source.relative_to(paths.root)),
+                }
+            )
         brief_text, brief_path = _node_brief(paths, parent)
         if brief_text:
             body_parts.append(f"## Parent Brief: {parent}\n\n{brief_text}")
-            sections.append({"name": f"parent_brief:{parent}", "estimated_tokens": len(brief_text.split()), "source": str(brief_path.relative_to(paths.root))})
+            sections.append(
+                {
+                    "name": f"parent_brief:{parent}",
+                    "estimated_tokens": len(brief_text.split()),
+                    "source": str(brief_path.relative_to(paths.root)),
+                }
+            )
         text, path = _current_memory(paths, parent)
         body_parts.append(f"## Parent Context: {parent}\n\n{text or '_No current memory found._'}")
-        sections.append({"name": f"parent:{parent}", "estimated_tokens": len(text.split()), "source": str(path.relative_to(paths.root))})
+        sections.append(
+            {
+                "name": f"parent:{parent}",
+                "estimated_tokens": len(text.split()),
+                "source": str(path.relative_to(paths.root)),
+            }
+        )
 
     target_charter, target_charter_path = _charter_memory(paths, target)
     if target_charter:
         body_parts.append(f"## Target Charter\n\n{target_charter}")
-        sections.append({"name": "target_charter", "estimated_tokens": len(target_charter.split()), "source": str(target_charter_path.relative_to(paths.root))})
+        sections.append(
+            {
+                "name": "target_charter",
+                "estimated_tokens": len(target_charter.split()),
+                "source": str(target_charter_path.relative_to(paths.root)),
+            }
+        )
 
     target_brief, target_brief_path = _node_brief(paths, target)
     if target_brief:
         body_parts.append(f"## Target Brief\n\n{target_brief}")
-        sections.append({"name": "target_brief", "estimated_tokens": len(target_brief.split()), "source": str(target_brief_path.relative_to(paths.root))})
+        sections.append(
+            {
+                "name": "target_brief",
+                "estimated_tokens": len(target_brief.split()),
+                "source": str(target_brief_path.relative_to(paths.root)),
+            }
+        )
 
     target_text, target_path = _current_memory(paths, target)
     body_parts.append(f"## Target Context\n\n{target_text or '_No target current memory found._'}")
-    sections.append({"name": "target", "estimated_tokens": len(target_text.split()), "source": str(target_path.relative_to(paths.root))})
+    sections.append(
+        {
+            "name": "target",
+            "estimated_tokens": len(target_text.split()),
+            "source": str(target_path.relative_to(paths.root)),
+        }
+    )
 
     for edge_id in graph.connected_edges(target):
         edge_brief, edge_brief_path = _edge_brief(paths, edge_id)
         if edge_brief:
             body_parts.append(f"## Shared Edge Brief: {edge_id}\n\n{edge_brief}")
-            sections.append({"name": f"edge_brief:{edge_id}", "estimated_tokens": len(edge_brief.split()), "source": str(edge_brief_path.relative_to(paths.root))})
+            sections.append(
+                {
+                    "name": f"edge_brief:{edge_id}",
+                    "estimated_tokens": len(edge_brief.split()),
+                    "source": str(edge_brief_path.relative_to(paths.root)),
+                }
+            )
         text, path = _edge_memory(paths, edge_id)
-        body_parts.append(f"## Shared Edge Context: {edge_id}\n\n{text or '_No edge current memory found._'}")
-        sections.append({"name": f"edge:{edge_id}", "estimated_tokens": len(text.split()), "source": str(path.relative_to(paths.root))})
+        body_parts.append(
+            f"## Shared Edge Context: {edge_id}\n\n{text or '_No edge current memory found._'}"
+        )
+        sections.append(
+            {
+                "name": f"edge:{edge_id}",
+                "estimated_tokens": len(text.split()),
+                "source": str(path.relative_to(paths.root)),
+            }
+        )
 
     dirty_dir = paths.root / "memory" / "state" / "context-dirty"
-    dirty_warnings = [path.name for path in sorted(dirty_dir.glob("*.yaml")) if target in path.read_text(encoding="utf-8", errors="ignore")]
+    dirty_warnings = [
+        path.name
+        for path in sorted(dirty_dir.glob("*.yaml"))
+        if target in path.read_text(encoding="utf-8", errors="ignore")
+    ]
     body_parts.append(
         "## Dirty Context Warnings\n\n"
         + ("\n".join(f"- {item}" for item in dirty_warnings) if dirty_warnings else "None.")
@@ -130,10 +197,17 @@ def compile_context_pack(root: Path, target: str) -> tuple[Path, Path]:
         or budget.get("on_over_budget", "create_compaction_job")
     )
     compaction_mode = str(compaction_policy.get("mode", "threshold")).lower()
-    validation = {"status": "warning" if dirty_warnings else "passed", "errors": [], "warnings": dirty_warnings}
+    validation = {
+        "status": "warning" if dirty_warnings else "passed",
+        "errors": [],
+        "warnings": dirty_warnings,
+    }
     if estimated_tokens > budget_tokens:
         validation = {"status": "over_budget", "errors": [], "warnings": ["context_over_budget"]}
-        if compaction_mode in {"threshold", "auto", "automatic"} and on_over_budget == "create_compaction_job":
+        if (
+            compaction_mode in {"threshold", "auto", "automatic"}
+            and on_over_budget == "create_compaction_job"
+        ):
             job_id = new_id("job")
             job = {
                 "id": job_id,
@@ -165,7 +239,9 @@ def compile_context_pack(root: Path, target: str) -> tuple[Path, Path]:
         validation=validation,
     )
     manifest_path = output_dir / "MANIFEST.yaml"
-    atomic_write_text(manifest_path, yaml.safe_dump(manifest.model_dump(mode="json"), sort_keys=False))
+    atomic_write_text(
+        manifest_path, yaml.safe_dump(manifest.model_dump(mode="json"), sort_keys=False)
+    )
     OperationLog(paths).append(
         operation_type="context_compile",
         actor="system:context",
@@ -228,7 +304,9 @@ def invalidate_context(
         targets=[str(paths.root), target, *impact.affected_targets],
         command="hive context invalidate",
         changed_files=changed_files,
-        changed_records=[{"id": invalidation_id, "type": "context_invalidation", "status": record["status"]}],
+        changed_records=[
+            {"id": invalidation_id, "type": "context_invalidation", "status": record["status"]}
+        ],
         rollback={
             "supported": bool(changed_files),
             "strategy": "close_dirty_marker" if changed_files else "report_only",

@@ -4,7 +4,6 @@ from pathlib import Path
 from typing import Any
 
 from . import simple_yaml as yaml
-
 from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
 from .models import OperationRecord

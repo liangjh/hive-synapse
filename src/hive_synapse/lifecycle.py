@@ -23,13 +23,36 @@ def _memory_dir(paths: WorkspacePaths, node_id: str) -> Path:
 
 def _write_import_workspace(paths: WorkspacePaths, node_id: str) -> Path:
     root = paths.root / "memory" / "imports" / target_to_path_fragment(node_id)
-    for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected", "items", "reports"]:
+    for child in [
+        "inbox",
+        "fetched",
+        "normalized",
+        "compacted",
+        "candidates",
+        "processed",
+        "rejected",
+        "items",
+        "reports",
+    ]:
         (root / child).mkdir(parents=True, exist_ok=True)
     workspace = {
         "id": f"import_workspace_{node_id.replace('/', '_')}",
         "target": node_id,
         "status": "active",
-        "paths": {child: str((root / child).relative_to(paths.root)) + "/" for child in ["inbox", "fetched", "normalized", "compacted", "candidates", "processed", "rejected", "items", "reports"]},
+        "paths": {
+            child: str((root / child).relative_to(paths.root)) + "/"
+            for child in [
+                "inbox",
+                "fetched",
+                "normalized",
+                "compacted",
+                "candidates",
+                "processed",
+                "rejected",
+                "items",
+                "reports",
+            ]
+        },
     }
     output = root / "workspace.yaml"
     if not output.exists():
@@ -37,7 +60,9 @@ def _write_import_workspace(paths: WorkspacePaths, node_id: str) -> Path:
     return output
 
 
-def create_node(root: Path, node_id: str, *, kind: str, title: str, parents: list[str], actor: str) -> dict[str, Any]:
+def create_node(
+    root: Path, node_id: str, *, kind: str, title: str, parents: list[str], actor: str
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     node_path = _node_file(paths, node_id)
@@ -54,13 +79,23 @@ def create_node(root: Path, node_id: str, *, kind: str, title: str, parents: lis
         "history_memory_file": f"memory/records/nodes/{node_id}/HISTORY.md",
         "import_workspace": f"memory/imports/{node_id}/",
     }
-    atomic_write_text(node_path, dump_markdown(record, f"# {title}\n\nGraph node for `{node_id}`.\n"))
+    atomic_write_text(
+        node_path, dump_markdown(record, f"# {title}\n\nGraph node for `{node_id}`.\n")
+    )
     memory_dir = _memory_dir(paths, node_id)
-    atomic_write_text(memory_dir / "CURRENT.md", f"# Current Memory: {title}\n\nStartup context for `{node_id}`.\n")
-    atomic_write_text(memory_dir / "HISTORY.md", f"# Historical Memory: {title}\n\nHistorical context for `{node_id}`.\n")
+    atomic_write_text(
+        memory_dir / "CURRENT.md",
+        f"# Current Memory: {title}\n\nStartup context for `{node_id}`.\n",
+    )
+    atomic_write_text(
+        memory_dir / "HISTORY.md",
+        f"# Historical Memory: {title}\n\nHistorical context for `{node_id}`.\n",
+    )
     charter_result = ensure_charter(paths.root, node_id, actor=actor, title=title)
     import_workspace = _write_import_workspace(paths, node_id)
-    policy_path = paths.root / "policies" / "nodes" / target_to_path_fragment(node_id).with_suffix(".yaml")
+    policy_path = (
+        paths.root / "policies" / "nodes" / target_to_path_fragment(node_id).with_suffix(".yaml")
+    )
     atomic_write_text(
         policy_path,
         yaml.safe_dump(
@@ -119,7 +154,9 @@ def move_node(root: Path, node_id: str, *, parents: list[str], actor: str) -> di
     return {"ok": True, "node": record, "old_parents": old_parents, "operation": op.id}
 
 
-def archive_node(root: Path, node_id: str, *, actor: str, reason: str, defer_compaction: bool = False) -> dict[str, Any]:
+def archive_node(
+    root: Path, node_id: str, *, actor: str, reason: str, defer_compaction: bool = False
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     if not defer_compaction:
@@ -152,8 +189,14 @@ def archive_node(root: Path, node_id: str, *, actor: str, reason: str, defer_com
         actor=actor,
         targets=[str(paths.root), node_id],
         command="hive node archive",
-        changed_files=[{"path": str(node_path.relative_to(paths.root))}, {"path": str(archive_path.relative_to(paths.root))}],
-        changed_records=[{"id": node_id, "type": "node"}, {"id": archive_record["id"], "type": "archive"}],
+        changed_files=[
+            {"path": str(node_path.relative_to(paths.root))},
+            {"path": str(archive_path.relative_to(paths.root))},
+        ],
+        changed_records=[
+            {"id": node_id, "type": "node"},
+            {"id": archive_record["id"], "type": "archive"},
+        ],
         rollback={"supported": True, "strategy": "restore_node_status"},
     )
     return {"ok": True, "node": record, "archive": archive_record, "operation": op.id}
@@ -182,7 +225,9 @@ def restore_node(root: Path, node_id: str, *, actor: str) -> dict[str, Any]:
     return {"ok": True, "node": record, "operation": op.id}
 
 
-def assign_actor(root: Path, actor_id: str, *, home_node: str, role: str, actor: str) -> dict[str, Any]:
+def assign_actor(
+    root: Path, actor_id: str, *, home_node: str, role: str, actor: str
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     assignment_id = f"assignment_{actor_id.replace(':', '_').replace('/', '_')}"
@@ -242,8 +287,14 @@ def archive_actor(root: Path, actor_id: str, *, actor: str, reason: str) -> dict
         actor=actor,
         targets=[str(paths.root), actor_id],
         command="hive actor archive",
-        changed_files=[{"path": path} for path in changed] + [{"path": str(archive_path.relative_to(paths.root))}],
+        changed_files=[{"path": path} for path in changed]
+        + [{"path": str(archive_path.relative_to(paths.root))}],
         changed_records=[{"id": archive_record["id"], "type": "archive"}],
         rollback={"supported": True, "strategy": "restore_assignments"},
     )
-    return {"ok": True, "archive": archive_record, "changed_assignments": changed, "operation": op.id}
+    return {
+        "ok": True,
+        "archive": archive_record,
+        "changed_assignments": changed,
+        "operation": op.id,
+    }

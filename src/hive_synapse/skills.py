@@ -5,7 +5,7 @@ from typing import Any
 
 from . import simple_yaml as yaml
 from .fs import atomic_write_text
-from .ids import new_id, utc_now_iso
+from .ids import utc_now_iso
 from .operations import OperationLog
 from .paths import WorkspacePaths
 
@@ -14,7 +14,16 @@ def _skill_path(paths: WorkspacePaths, skill_id: str) -> Path:
     return paths.root / "memory" / "skills" / f"{skill_id}.yaml"
 
 
-def register_skill(root: Path, skill_id: str, *, title: str, scope: str, trigger: str, permission_profile: str, actor: str) -> dict[str, Any]:
+def register_skill(
+    root: Path,
+    skill_id: str,
+    *,
+    title: str,
+    scope: str,
+    trigger: str,
+    permission_profile: str,
+    actor: str,
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     skill = {
@@ -44,7 +53,9 @@ def register_skill(root: Path, skill_id: str, *, title: str, scope: str, trigger
     return {"ok": True, "skill": skill, "operation": op.id}
 
 
-def list_skills(root: Path, *, scope: str | None = None, include_archived: bool = False) -> dict[str, Any]:
+def list_skills(
+    root: Path, *, scope: str | None = None, include_archived: bool = False
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     skills = []
@@ -59,7 +70,9 @@ def list_skills(root: Path, *, scope: str | None = None, include_archived: bool 
     return {"ok": True, "skills": skills}
 
 
-def update_skill_status(root: Path, skill_id: str, *, status: str, actor: str, reason: str) -> dict[str, Any]:
+def update_skill_status(
+    root: Path, skill_id: str, *, status: str, actor: str, reason: str
+) -> dict[str, Any]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
     path = _skill_path(paths, skill_id)

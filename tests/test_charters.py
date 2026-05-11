@@ -12,7 +12,9 @@ class CharterTests(unittest.TestCase):
     def test_fixture_charters_validate_and_compile_into_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             charter = workspace / "memory/records/nodes/departments/engineering/CHARTER.md"
             self.assertTrue(charter.exists())
             validate = run_hive("validate", str(workspace), "--json")
@@ -26,7 +28,9 @@ class CharterTests(unittest.TestCase):
                 "--json",
             )
             self.assertEqual(compile_result.returncode, 0, compile_result.stderr)
-            pack = workspace / "memory/generated/context-packs/nodes/departments/engineering/PACK.md"
+            pack = (
+                workspace / "memory/generated/context-packs/nodes/departments/engineering/PACK.md"
+            )
             text = pack.read_text()
             self.assertIn("Parent Charter: org", text)
             self.assertIn("Target Charter", text)
@@ -36,7 +40,9 @@ class CharterTests(unittest.TestCase):
     def test_charter_update_appends_history_and_invalidates_context(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             update = run_hive(
                 "charter",
                 "update",
@@ -56,7 +62,14 @@ class CharterTests(unittest.TestCase):
             self.assertEqual(update.returncode, 0, update.stderr)
             payload = json.loads(update.stdout)
             self.assertTrue(payload["ok"])
-            show = run_hive("charter", "show", "departments/engineering", "--workspace", str(workspace), "--json")
+            show = run_hive(
+                "charter",
+                "show",
+                "departments/engineering",
+                "--workspace",
+                str(workspace),
+                "--json",
+            )
             self.assertEqual(show.returncode, 0, show.stderr)
             body = json.loads(show.stdout)["body"]
             self.assertIn("Ship reliable agent memory primitives", body)
@@ -69,7 +82,9 @@ class CharterTests(unittest.TestCase):
     def test_node_create_creates_charter(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             result = run_hive(
                 "node",
                 "create",
@@ -87,7 +102,9 @@ class CharterTests(unittest.TestCase):
                 "--json",
             )
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertTrue((workspace / "memory/records/nodes/departments/research/CHARTER.md").exists())
+            self.assertTrue(
+                (workspace / "memory/records/nodes/departments/research/CHARTER.md").exists()
+            )
 
 
 if __name__ == "__main__":

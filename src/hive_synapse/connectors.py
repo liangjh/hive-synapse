@@ -15,13 +15,45 @@ class ConnectorSpec:
 
 
 CONNECTORS = {
-    "local": ConnectorSpec("local", "Local file or text import connector.", "none", ["copy_file", "preserve_text"]),
-    "obsidian": ConnectorSpec("obsidian", "Obsidian vault/folder connector using local filesystem paths.", "none", ["copy_file", "folder_inventory"]),
-    "url": ConnectorSpec("url", "URL connector preserving external references; network fetch is explicit future work.", "none", ["external_ref"]),
-    "git": ConnectorSpec("git", "Git repository connector preserving clone/fetch references.", "env_or_ssh_agent", ["external_ref"]),
-    "github": ConnectorSpec("github", "GitHub connector preserving repo, issue, PR, or file references.", "GITHUB_TOKEN optional", ["external_ref"]),
-    "notion": ConnectorSpec("notion", "Notion connector preserving page/database references for later authenticated fetch.", "NOTION_TOKEN", ["external_ref"]),
-    "gdrive": ConnectorSpec("gdrive", "Google Drive connector preserving file/document references for later authenticated fetch.", "GOOGLE_APPLICATION_CREDENTIALS or OAuth", ["external_ref"]),
+    "local": ConnectorSpec(
+        "local", "Local file or text import connector.", "none", ["copy_file", "preserve_text"]
+    ),
+    "obsidian": ConnectorSpec(
+        "obsidian",
+        "Obsidian vault/folder connector using local filesystem paths.",
+        "none",
+        ["copy_file", "folder_inventory"],
+    ),
+    "url": ConnectorSpec(
+        "url",
+        "URL connector preserving external references; network fetch is explicit future work.",
+        "none",
+        ["external_ref"],
+    ),
+    "git": ConnectorSpec(
+        "git",
+        "Git repository connector preserving clone/fetch references.",
+        "env_or_ssh_agent",
+        ["external_ref"],
+    ),
+    "github": ConnectorSpec(
+        "github",
+        "GitHub connector preserving repo, issue, PR, or file references.",
+        "GITHUB_TOKEN optional",
+        ["external_ref"],
+    ),
+    "notion": ConnectorSpec(
+        "notion",
+        "Notion connector preserving page/database references for later authenticated fetch.",
+        "NOTION_TOKEN",
+        ["external_ref"],
+    ),
+    "gdrive": ConnectorSpec(
+        "gdrive",
+        "Google Drive connector preserving file/document references for later authenticated fetch.",
+        "GOOGLE_APPLICATION_CREDENTIALS or OAuth",
+        ["external_ref"],
+    ),
 }
 
 

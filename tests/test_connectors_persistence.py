@@ -13,7 +13,11 @@ class ConnectorPersistenceTests(unittest.TestCase):
         connectors = run_hive("connector", "list", "--json")
         self.assertEqual(connectors.returncode, 0, connectors.stderr)
         connector_names = {item["name"] for item in json.loads(connectors.stdout)["connectors"]}
-        self.assertTrue({"local", "obsidian", "url", "git", "github", "notion", "gdrive"}.issubset(connector_names))
+        self.assertTrue(
+            {"local", "obsidian", "url", "git", "github", "notion", "gdrive"}.issubset(
+                connector_names
+            )
+        )
         persistence = run_hive("persistence", "list", "--json")
         self.assertEqual(persistence.returncode, 0, persistence.stderr)
         backends = {item["name"]: item for item in json.loads(persistence.stdout)["backends"]}
@@ -23,7 +27,9 @@ class ConnectorPersistenceTests(unittest.TestCase):
     def test_remote_fetch_records_connector_external_ref(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             workspace = Path(temp_dir) / "workspace"
-            self.assertEqual(run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0)
+            self.assertEqual(
+                run_hive("init", str(workspace), "--fixture", "basic-org").returncode, 0
+            )
             fetch = run_hive(
                 "import",
                 "fetch",

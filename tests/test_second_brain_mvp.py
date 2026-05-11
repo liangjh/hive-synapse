@@ -3,7 +3,6 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
-from typing import Any
 
 from tests.support import init_basic_workspace, json_from_stdout, run_hive
 
@@ -52,7 +51,9 @@ class SecondBrainMvpCliTests(unittest.TestCase):
                 "--json",
             )
             self.assertEqual(compile_result.returncode, 0, compile_result.stderr)
-            pack = workspace / "memory/generated/context-packs/nodes/departments/engineering/PACK.md"
+            pack = (
+                workspace / "memory/generated/context-packs/nodes/departments/engineering/PACK.md"
+            )
             self.assertIn(f"Shared Edge Context: {edge_id}", pack.read_text(encoding="utf-8"))
 
             archived = run_hive(
@@ -140,14 +141,19 @@ class SecondBrainMvpCliTests(unittest.TestCase):
             self.assertEqual(cron.returncode, 0, cron.stderr)
             self.assertTrue(json_from_stdout(cron)["ok"])
 
-            launchd = run_hive("scheduler", "install", "launchd", "--workspace", str(workspace), "--json")
+            launchd = run_hive(
+                "scheduler", "install", "launchd", "--workspace", str(workspace), "--json"
+            )
             self.assertEqual(launchd.returncode, 0, launchd.stderr)
             self.assertTrue(json_from_stdout(launchd)["ok"])
 
             self.assertTrue(scheduler_dir.is_dir())
             scheduler_files = {path.name for path in scheduler_dir.iterdir() if path.is_file()}
             self.assertTrue(any("cron" in name for name in scheduler_files), scheduler_files)
-            self.assertTrue(any("launchd" in name or name.endswith(".plist") for name in scheduler_files), scheduler_files)
+            self.assertTrue(
+                any("launchd" in name or name.endswith(".plist") for name in scheduler_files),
+                scheduler_files,
+            )
 
     def test_operation_list_and_show_expose_operation_records(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -170,7 +176,9 @@ class SecondBrainMvpCliTests(unittest.TestCase):
             self.assertIn("workspace_init", operation_types)
             self.assertIn("context_compile", operation_types)
 
-            shown = run_hive("operation", "show", operation_ids[-1], "--workspace", str(workspace), "--json")
+            shown = run_hive(
+                "operation", "show", operation_ids[-1], "--workspace", str(workspace), "--json"
+            )
             self.assertEqual(shown.returncode, 0, shown.stderr)
             operation = json_from_stdout(shown)["operation"]
             self.assertEqual(operation["id"], operation_ids[-1])
