@@ -26,7 +26,7 @@ The MVP runtime has no required third-party dependencies. If you do not use `uv`
 ./bin/hive --help
 ```
 
-The current CLI supports workspace initialization, validation, context compilation/invalidation, imports, promotion review, jobs, lifecycle operations, skills, archives, upgrades, operation policy inspection, connector registries, persistence registries, and the MCP-compatible tool surface. See `docs/command-reference.md` for the full command list.
+The current CLI supports workspace initialization, validation, charters, context compilation/invalidation, imports, promotion review, jobs, node/edge lifecycle and compaction, actor assignment/sign-in/refresh, skills, archives, scheduler templates, operation audit, backups, upgrades, operation policy inspection, connector registries, persistence registries, and the MCP-compatible tool surface. See `docs/command-reference.md` for the full command list.
 
 ## 3. Create a Demo Workspace
 
@@ -77,21 +77,30 @@ Fresh workspaces start with low-noise operation policy in `policies/operations.y
 
 Validation checks required directories, graph records, memory records, source references, and duplicate IDs.
 
-## 5. Compile a Context Pack
+## 5. Sign In an Agent and Compile Context
+
+The fixture includes `agent:codex-engineering-001` assigned to `departments/engineering`. Sign it in to generate scoped startup context:
 
 ```bash
-./bin/hive context compile departments/engineering --workspace /tmp/hive-demo
+./bin/hive actor signin agent:codex-engineering-001 \
+  --workspace /tmp/hive-demo \
+  --require-assignment \
+  --json
 ```
 
-The compiled pack is written under:
+The response includes a `context_pack` path under:
 
 ```text
 memory/generated/context-packs/nodes/departments/engineering/
 ```
 
-The context pack is generated. Do not hand-edit it as source of truth.
+You can also compile the pack directly:
 
-## 6. Backup and Preview Rollback
+```bash
+./bin/hive context compile departments/engineering --workspace /tmp/hive-demo
+```
+
+The context pack is generated. Do not hand-edit it as source of truth.
 
 ## 6. Create a Backup and Preview Rollback
 
@@ -144,19 +153,23 @@ Promotion is conservative by default. Sweeps can create proposals, but publishin
 Automatic side effects are policy-driven. With the default policy, applying a promotion updates memory and records an invalidation observation without creating a new dirty marker. Set `context_invalidation.mode: strict` in `policies/operations.yaml` when promotion and lifecycle changes should dirty affected context automatically.
 
 
-## 10. Lifecycle, Skills, and Upgrades
+## 10. Lifecycle, Compaction, Skills, and Upgrades
 
 ```bash
 ./bin/hive node create departments/research --workspace /tmp/hive-demo --kind department --title "Research" --parent org --actor human:admin
 ./bin/hive actor assign agent:research-001 --workspace /tmp/hive-demo --home-node departments/research --role contributor --actor human:admin
+./bin/hive actor signin agent:research-001 --workspace /tmp/hive-demo --require-assignment --json
+./bin/hive node compact departments/research --workspace /tmp/hive-demo --actor steward:research
+./bin/hive edge list --workspace /tmp/hive-demo
 ./bin/hive skill register literature-review --workspace /tmp/hive-demo --title "Literature Review" --scope departments/research --trigger "research synthesis" --actor steward:research
 ./bin/hive archive sweep --workspace /tmp/hive-demo
+./bin/hive scheduler install cron --workspace /tmp/hive-demo --interval-minutes 15
 ./bin/hive upgrade doctor --workspace /tmp/hive-demo
 ./bin/hive upgrade migration-dry-run 001_runtime_markers --workspace /tmp/hive-demo
 ./bin/hive upgrade template-diff --workspace /tmp/hive-demo
 ```
 
-Runtime upgrade operations are designed to be non-clobbering. Template diffing reports differences first; template apply only creates missing files.
+Runtime upgrade operations are designed to be non-clobbering. Template diffing reports differences first; template apply only creates missing files. Scheduler install writes templates under `local-overrides/schedulers/`; review them before installing into the OS.
 
 ## 11. Connector and Persistence Registries
 
@@ -167,3 +180,23 @@ Runtime upgrade operations are designed to be non-clobbering. Template diffing r
 ```
 
 Filesystem Markdown remains canonical in the MVP. Vector, relational, and temporal graph stores are modeled as future projections from canonical records.
+
+## 12. Install Agent Skills
+
+Hive ships portable skills under `skills/hive/` plus adapter packages for Codex and Claude.
+
+```bash
+scripts/install-agent-skills.py codex
+scripts/install-agent-skills.py claude
+scripts/install-agent-skills.py generic --target ./agent-skills
+scripts/install-agent-skills.py all --dry-run
+```
+
+Use the generic target for Hermes, OpenClaw, or other harnesses that can consume Markdown `SKILL.md` style instructions. See `docs/agent-interoperability.md` and `docs/agent-skills.md`.
+
+## 13. Known MVP Limits
+
+- Notion and Google Drive connectors preserve external references only; authenticated fetch/watch is not implemented yet.
+- Markdown/YAML is the canonical persistence layer; vector and relational backends are not active stores yet.
+- Rollback preview exists; rollback apply is not implemented.
+- Agent sign-in provides partial context hydration; per-agent filesystem projection and hard write-scope enforcement are future work.
