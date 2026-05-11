@@ -84,6 +84,24 @@ mkdir -p "${CLAUDE_HOME:-$HOME/.claude}/commands"
 cp adapters/claude/commands/hive-*.md "${CLAUDE_HOME:-$HOME/.claude}/commands/"
 ```
 
+## Deploy to Hermes, OpenClaw, or Other Agents
+
+Use the generic installer when a harness supports Markdown skills or has its own plugin directory:
+
+```bash
+scripts/install-agent-skills.py generic --target <agent-skill-directory>
+```
+
+Examples:
+
+```bash
+scripts/install-agent-skills.py generic --target "$HOME/.hermes/skills/hive"
+scripts/install-agent-skills.py generic --target "$HOME/.openclaw/skills/hive"
+scripts/install-agent-skills.py generic --target "<openclaw-agent-workspace>/skills/hive"
+```
+
+If the target framework requires a different manifest or permission schema, transform from `skills/hive/MANIFEST.yaml` and preserve the `SKILL.md` command semantics.
+
 ## Natural Language Examples
 
 - "Sign in the research agent and load only its context." → `hive-context-sync`
