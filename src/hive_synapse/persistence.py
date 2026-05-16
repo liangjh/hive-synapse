@@ -1,3 +1,12 @@
+"""Persistence backend registry.
+
+Module guide:
+- `PersistenceBackend` describes a possible persistence layer.
+- `list_backends` returns Markdown, vector, relational, and graph backend status.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

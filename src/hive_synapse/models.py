@@ -1,3 +1,14 @@
+"""Lightweight data models used by workspace records.
+
+Module guide:
+- `HiveModel` provides simple validation/default handling for record classes.
+- Record classes include `WorkspaceConfig`, `NodeRecord`, `EdgeRecord`, `MemoryRecord`,
+  `OperationRecord`, `ContextPackManifest`, and validation models.
+- `default_factory` marks mutable defaults for model fields.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from copy import deepcopy

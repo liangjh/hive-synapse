@@ -1,3 +1,13 @@
+"""Workspace repository helpers for raw and memory records.
+
+Module guide:
+- `WorkspaceRepository` preserves raw sources and loads memory records.
+- `LoadedRecord` wraps a record path, frontmatter, and body.
+- Path helpers locate node current/history files and relative paths.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import json

@@ -1,3 +1,13 @@
+"""Command-line interface wiring for Hive Synapse.
+
+Module guide:
+- `build_parser` defines the full `hive` command tree.
+- `main` parses argv, dispatches commands, and formats CLI errors.
+- `_cmd_*` handlers are internal adapters from argparse to service modules.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import argparse

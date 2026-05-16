@@ -1,3 +1,12 @@
+"""Markdown frontmatter parsing and writing.
+
+Module guide:
+- `MarkdownDocument` stores parsed frontmatter plus Markdown body.
+- `read_markdown`, `dump_markdown`, and `write_markdown` handle record files.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

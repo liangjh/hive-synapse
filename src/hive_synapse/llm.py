@@ -1,3 +1,14 @@
+"""LLM policy, provider adapters, and model-run recording.
+
+Module guide:
+- `ensure_llm_policy`, `add_profile`, and `assign_profile` configure model use.
+- `generate_structured` executes provider-backed structured generation.
+- `write_model_run` records prompt/model metadata and outputs for audit.
+- Provider classes implement deterministic, HTTP, LiteLLM, and command execution.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import hashlib

@@ -1,3 +1,13 @@
+"""Validation guardrails for memory and generated artifacts.
+
+Module guide:
+- `validate_memory_guardrails` checks workspace memory write safety.
+- `validate_generated_artifact` verifies generated artifact metadata expectations.
+- `dirty_markers_for_target` and `assert_context_fresh` enforce context freshness.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

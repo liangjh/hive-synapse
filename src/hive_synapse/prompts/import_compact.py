@@ -1,3 +1,11 @@
+"""Import compaction prompt definition.
+
+Module guide:
+- `IMPORT_COMPACT_PROMPT` is the versioned chat prompt for candidate-memory summaries.
+
+Maintenance: update this guide when adding public prompt specs to this module.
+"""
+
 from __future__ import annotations
 
 from .types import ChatPromptSpec

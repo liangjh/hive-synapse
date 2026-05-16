@@ -1,3 +1,12 @@
+"""Auditable prompt package exports.
+
+Module guide:
+- Imports expose prompt specs, registry helpers, and prompt base types.
+- `prompt_catalog` and `get_prompt` are the main prompt discovery helpers.
+
+Maintenance: update this guide when adding public prompt exports.
+"""
+
 from __future__ import annotations
 
 from .import_classify import IMPORT_CLASSIFY_PROMPT

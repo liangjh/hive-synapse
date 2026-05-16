@@ -1,3 +1,12 @@
+"""Operation audit logging and lookup.
+
+Module guide:
+- `OperationLog.append` records mutating command operations.
+- `list_operations` and `show_operation` provide audit visibility.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

@@ -1,3 +1,13 @@
+"""Filesystem job queue operations.
+
+Module guide:
+- `enqueue_job`, `list_jobs`, and `claim_job` manage pending work.
+- `complete_job` and `fail_job` finalize claimed jobs.
+- `run_next_job` claims and executes the next supported job handler.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import os

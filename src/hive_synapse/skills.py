@@ -1,3 +1,13 @@
+"""Shared skill registry operations.
+
+Module guide:
+- `register_skill` records a shared skill definition.
+- `list_skills` returns active or archived skill records.
+- `update_skill_status` changes skill lifecycle status.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

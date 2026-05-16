@@ -1,3 +1,13 @@
+"""Prompt spec types.
+
+Module guide:
+- `PromptSpec` stores common prompt ID, version, purpose, and safety metadata.
+- `ChatPromptSpec` renders model chat messages.
+- `TextPromptSpec` renders generated instruction/document templates.
+
+Maintenance: update this guide when adding public prompt classes or helpers.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

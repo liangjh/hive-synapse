@@ -1,3 +1,11 @@
+"""Workspace watchdog reporting.
+
+Module guide:
+- `watchdog_report` scans workspace health and optionally enqueues remediation jobs.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

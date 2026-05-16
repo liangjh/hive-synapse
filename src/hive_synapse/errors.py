@@ -1,3 +1,12 @@
+"""Shared exception types.
+
+Module guide:
+- `HiveError` is the base exception for controlled CLI/API failures.
+- `WorkspaceError`, `ValidationFailure`, and `PreconditionFailed` specialize it.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 

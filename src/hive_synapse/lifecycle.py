@@ -1,3 +1,12 @@
+"""Node and actor lifecycle operations.
+
+Module guide:
+- `create_node`, `move_node`, `archive_node`, and `restore_node` manage graph nodes.
+- `assign_actor` and `archive_actor` manage actor placement and lifecycle.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

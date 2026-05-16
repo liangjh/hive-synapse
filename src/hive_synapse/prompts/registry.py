@@ -1,3 +1,13 @@
+"""Central prompt registry.
+
+Module guide:
+- `ALL_PROMPTS` lists every auditable prompt spec.
+- `prompt_catalog` returns serializable prompt audit records.
+- `get_prompt` resolves a prompt by bare ID or full `id.version`.
+
+Maintenance: update this guide and `ALL_PROMPTS` when adding public prompt specs.
+"""
+
 from __future__ import annotations
 
 from typing import Any

@@ -1,3 +1,13 @@
+"""Generated session and agent-instruction prompt definitions.
+
+Module guide:
+- `SESSION_OUTBOX_README_PROMPT` and `SESSION_BOOTSTRAP_PROMPT` guide sessions.
+- `SESSION_SOUL_PROMPT`, `SESSION_USER_PROMPT`, `OPENCLAW_TOOLS_PROMPT`, and
+  `SIGNIN_BOOTSTRAP_PROMPT` render generated agent-facing files.
+
+Maintenance: update this guide when adding public prompt specs to this module.
+"""
+
 from __future__ import annotations
 
 from .types import TextPromptSpec

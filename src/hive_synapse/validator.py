@@ -1,3 +1,11 @@
+"""Workspace validation entry point.
+
+Module guide:
+- `validate_workspace` checks required workspace files, graph records, policies, and warnings.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

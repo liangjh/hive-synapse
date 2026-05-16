@@ -1,3 +1,13 @@
+"""Shared edge lifecycle operations.
+
+Module guide:
+- `create_edge` creates cross-node shared memory edges.
+- `list_edges` enumerates active or archived edges.
+- `archive_edge`, `restore_edge`, and `update_edge_status` manage edge state.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

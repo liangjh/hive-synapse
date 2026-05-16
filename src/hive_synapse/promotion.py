@@ -1,3 +1,12 @@
+"""Candidate memory promotion workflow.
+
+Module guide:
+- `list_proposals`, `review_proposal`, `apply_proposal`, and `reject_proposal` manage review.
+- `sweep_promotability` scans candidate memory and can create proposals.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

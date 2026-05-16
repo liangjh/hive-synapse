@@ -1,3 +1,11 @@
+"""Promotion sweep prompt definition.
+
+Module guide:
+- `PROMOTION_SWEEP_PROMPT` is the versioned chat prompt for promotion advisories.
+
+Maintenance: update this guide when adding public prompt specs to this module.
+"""
+
 from __future__ import annotations
 
 from .types import ChatPromptSpec

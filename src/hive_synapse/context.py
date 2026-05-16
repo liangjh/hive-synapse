@@ -1,3 +1,13 @@
+"""Context-pack compilation and invalidation.
+
+Module guide:
+- `compile_context_pack` builds generated `PACK.md` and `MANIFEST.yaml` files.
+- `context_impact` reports descendants, edges, actors, and affected targets.
+- `invalidate_context` writes or observes dirty-context markers per policy.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

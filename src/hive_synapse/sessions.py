@@ -1,3 +1,12 @@
+"""Actor sign-in and context refresh records.
+
+Module guide:
+- `sign_in_actor` creates a sign-in record and scoped context pack for an actor.
+- `refresh_signin` recompiles context for an existing sign-in.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

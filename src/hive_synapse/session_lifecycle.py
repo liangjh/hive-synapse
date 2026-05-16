@@ -1,3 +1,12 @@
+"""Materialized agent session lifecycle.
+
+Module guide:
+- `start_session` creates a harness-ready session mount with context and outbox files.
+- `finish_session` collects memory deltas back into actor/private and shared workflows.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import json

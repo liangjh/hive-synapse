@@ -1,3 +1,12 @@
+"""Workspace initialization and fixture generation.
+
+Module guide:
+- `create_workspace` initializes required directories, config, policies, and optional fixtures.
+- `write_basic_org_fixture` writes the demo org graph and starter memory.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

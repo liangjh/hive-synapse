@@ -1,3 +1,13 @@
+"""Operation policy loading and decision helpers.
+
+Module guide:
+- `ensure_operation_policy`, `load_operation_policy`, and `operation_policy` read policy.
+- `explain_operation_policy` reports effective workspace or node policy.
+- `context_invalidation_decision` decides whether to emit dirty markers.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from copy import deepcopy

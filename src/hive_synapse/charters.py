@@ -1,3 +1,13 @@
+"""Node charter storage and editing.
+
+Module guide:
+- `ensure_charter` creates a node `CHARTER.md` if missing.
+- `read_charter`, `list_charters`, and `update_charter` expose charter workflows.
+- `charter_path` and `charter_history_path` locate charter files.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

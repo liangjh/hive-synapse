@@ -1,3 +1,13 @@
+"""Small YAML-compatible parser/dumper used without runtime dependencies.
+
+Module guide:
+- `safe_dump` serializes simple Python values to YAML-like text.
+- `safe_load` parses the subset Hive writes and reads.
+- `YamlError` reports unsupported or invalid YAML input.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import json

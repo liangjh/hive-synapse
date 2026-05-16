@@ -1,3 +1,11 @@
+"""External scheduler template generation.
+
+Module guide:
+- `install_scheduler` writes cron or launchd templates for recurring Hive jobs.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import shlex

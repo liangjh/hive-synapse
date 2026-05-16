@@ -1,3 +1,12 @@
+"""Workspace backup and rollback preview helpers.
+
+Module guide:
+- `create_backup` creates a timestamped workspace backup and manifest.
+- `rollback_preview` reports what a rollback would touch without applying it.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import shutil

@@ -1,3 +1,12 @@
+"""Workspace upgrade, migration, and template maintenance.
+
+Module guide:
+- `doctor`, `list_migrations`, `migration_dry_run`, and `migration_apply` manage migrations.
+- `template_diff` and `template_apply_new` compare/apply runtime workspace templates.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

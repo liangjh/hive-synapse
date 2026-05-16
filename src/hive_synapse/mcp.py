@@ -1,3 +1,13 @@
+"""MCP-compatible tool surface.
+
+Module guide:
+- Tool functions such as `get_context_pack`, `import_add`, and `job_enqueue` wrap CLI APIs.
+- `list_tools` describes the available tool schema.
+- `call_tool` and `serve_json_lines` dispatch JSON-line MCP-style requests.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import json

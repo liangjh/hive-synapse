@@ -1,3 +1,12 @@
+"""In-memory graph loader and impact analysis.
+
+Module guide:
+- `MemoryGraph` loads node/edge records and exposes parent/edge/impact queries.
+- `GraphImpact` serializes affected descendants, edges, actors, and targets.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

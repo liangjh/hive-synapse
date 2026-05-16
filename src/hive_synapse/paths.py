@@ -1,3 +1,13 @@
+"""Workspace path constants and discovery helpers.
+
+Module guide:
+- `WorkspacePaths` centralizes important workspace directories and validation.
+- `find_workspace` walks upward to locate `hive.config.yaml`.
+- `target_to_path_fragment` converts graph IDs into safe relative paths.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

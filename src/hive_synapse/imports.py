@@ -1,3 +1,13 @@
+"""Import staging, classification, compaction, and proposal creation.
+
+Module guide:
+- `add_import` and `fetch_import` capture local/text/URL source material.
+- `classify_import` and `compact_import` create source-linked candidate memory.
+- `propose_import` creates promotion proposals from import candidates.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

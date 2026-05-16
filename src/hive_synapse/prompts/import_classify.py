@@ -1,3 +1,11 @@
+"""Import classification prompt definition.
+
+Module guide:
+- `IMPORT_CLASSIFY_PROMPT` is the versioned chat prompt for import classification.
+
+Maintenance: update this guide when adding public prompt specs to this module.
+"""
+
 from __future__ import annotations
 
 from .types import ChatPromptSpec

@@ -1,3 +1,13 @@
+"""Connector registry for import source references.
+
+Module guide:
+- `ConnectorSpec` describes supported import connector metadata.
+- `list_connectors` returns connector registry entries.
+- `classify_connector` and `external_ref_for` normalize import references.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

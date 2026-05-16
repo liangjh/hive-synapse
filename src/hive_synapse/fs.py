@@ -1,3 +1,13 @@
+"""Filesystem safety and atomic-write helpers.
+
+Module guide:
+- `atomic_write_text` writes text via temporary file replacement.
+- `write_new_text` refuses to overwrite existing files.
+- `sha256_file` and `ensure_within_root` support integrity and path safety.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 import hashlib

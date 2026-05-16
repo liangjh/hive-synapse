@@ -1,3 +1,12 @@
+"""Node and edge memory compaction.
+
+Module guide:
+- `compact_node` writes generated node `BRIEF.md` rollups.
+- `compact_edge` writes generated shared-edge `BRIEF.md` rollups.
+
+Maintenance: update this guide when adding public functions/classes to this module.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path
