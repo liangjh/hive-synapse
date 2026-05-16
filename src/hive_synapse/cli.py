@@ -49,6 +49,7 @@ from .promotion import (
     sweep_promotability,
 )
 from .scheduler import install_scheduler
+from .session_lifecycle import finish_session, start_session
 from .sessions import refresh_signin, sign_in_actor
 from .skills import list_skills, register_skill, update_skill_status
 from .upgrade import (
@@ -706,6 +707,59 @@ def _cmd_actor_refresh(args: argparse.Namespace) -> int:
         _print_json(result)
     else:
         print(result["bootstrap"])
+    return 0
+
+
+def _cmd_session_start(args: argparse.Namespace) -> int:
+    result = start_session(
+        Path(args.workspace),
+        args.actor_id,
+        adapter=args.adapter,
+        output=Path(args.output) if args.output else None,
+        home_node=args.home_node,
+        role=args.role,
+        instance=args.instance,
+        operator=args.actor,
+        require_assignment=args.require_assignment,
+        purpose=args.purpose,
+        force=args.force,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Started session: {result['session_id']}")
+        print(f"Mount: {result['mount']}")
+        print(f"Bootstrap: {', '.join(result['bootstrap_files'])}")
+        print(f"Finish: {result['finish_command']}")
+    return 0
+
+
+def _cmd_session_finish(args: argparse.Namespace) -> int:
+    result = finish_session(
+        Path(args.mount),
+        root=Path(args.workspace) if args.workspace else None,
+        actor=args.actor,
+        process=not args.no_process,
+        propose=not args.no_propose,
+        compact_target=args.compact_target,
+        llm_profile=args.llm_profile,
+        credential=args.credential,
+    )
+    if args.json:
+        _print_json(result)
+    else:
+        print(f"Finished session: {result['session_id']} ({result['status']})")
+        print(f"Session memory: {result['session_dir']}")
+        print(f"Private memory: {result['private_memory']}")
+        print(
+            f"Deltas: {result['delta_count']} "
+            f"private={result['private_delta_count']} "
+            f"shared={result['shared_delta_count']}"
+        )
+        if result.get("proposals"):
+            print(f"Proposals: {len(result['proposals'])}")
+        if result.get("edge_delta_note"):
+            print(result["edge_delta_note"])
     return 0
 
 
@@ -1415,6 +1469,43 @@ def build_parser() -> argparse.ArgumentParser:
     actor_refresh_cmd.add_argument("--actor")
     actor_refresh_cmd.add_argument("--json", action="store_true")
     actor_refresh_cmd.set_defaults(func=_cmd_actor_refresh)
+
+    session_parser = subparsers.add_parser("session", help="Agent session mount and memory collection")
+    session_subparsers = session_parser.add_subparsers(dest="session_command", required=True)
+
+    session_start = session_subparsers.add_parser(
+        "start", help="Materialize a scoped agent session mount"
+    )
+    session_start.add_argument("actor_id")
+    session_start.add_argument("--workspace", default=".")
+    session_start.add_argument(
+        "--adapter",
+        choices=["generic", "codex", "claude", "hermes", "openclaw"],
+        default="generic",
+    )
+    session_start.add_argument("--output", help="Mount directory to create")
+    session_start.add_argument("--home-node")
+    session_start.add_argument("--role")
+    session_start.add_argument("--instance")
+    session_start.add_argument("--actor")
+    session_start.add_argument("--purpose")
+    session_start.add_argument("--require-assignment", action="store_true")
+    session_start.add_argument("--force", action="store_true")
+    session_start.add_argument("--json", action="store_true")
+    session_start.set_defaults(func=_cmd_session_start)
+
+    session_finish = session_subparsers.add_parser(
+        "finish", help="Collect session outbox memory back into Hive"
+    )
+    session_finish.add_argument("mount")
+    session_finish.add_argument("--workspace")
+    session_finish.add_argument("--actor")
+    session_finish.add_argument("--no-process", action="store_true")
+    session_finish.add_argument("--no-propose", action="store_true")
+    session_finish.add_argument("--compact-target", action="store_true")
+    _add_llm_selection_args(session_finish)
+    session_finish.add_argument("--json", action="store_true")
+    session_finish.set_defaults(func=_cmd_session_finish)
 
     skill_parser = subparsers.add_parser("skill", help="Shared skill registry operations")
     skill_subparsers = skill_parser.add_subparsers(dest="skill_command", required=True)

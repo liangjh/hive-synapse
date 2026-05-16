@@ -74,6 +74,13 @@ Implemented job handlers include `import_compact`, `context_rebuild`, `promotion
 
 Use `actor signin` to produce scoped context packs for deployed agents.
 
+## Sessions
+
+- `hive session start <actor-id> --adapter generic|codex|claude|hermes|openclaw --output <mount>`
+- `hive session finish <mount> [--no-process] [--no-propose] [--compact-target]`
+
+`session start` signs the actor in, compiles context, and materializes a harness-ready mount with generated bootstrap files, `.hive/context/`, and `.hive/outbox/`. `session finish` collects `memory-delta.jsonl`, appends private memory, and routes shared deltas through import, compaction, and proposal workflows by default.
+
 ## Skills and Agent Adapters
 
 - `hive skill register|list|status ...`

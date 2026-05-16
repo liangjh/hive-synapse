@@ -31,7 +31,7 @@ Recommended first deployment:
 ~/Obsidian/HiveSecondBrain/    # canonical synced organization workspace
 ```
 
-Agents should call `hive actor signin` and load the generated context pack. They should not ingest the entire workspace unless you intentionally grant them that broader filesystem access.
+Agents can call `hive actor signin` directly, or use `hive session start` to create a harness-ready local mount with generated context files and an outbox. They should not ingest the entire workspace unless you intentionally grant them that broader filesystem access.
 
 ## Feature Matrix
 
@@ -41,9 +41,9 @@ Agents should call `hive actor signin` and load the generated context pack. They
 | Hierarchical graph memory | Node records for orgs, departments, teams, projects, agents, and arbitrary child nodes. | Supported via `hive node create\|move\|archive\|restore\|compact`. |
 | Cross-team graph edges | Explicit edge records and edge memory for scoped collaborations. | Supported via `hive edge create\|list\|archive\|restore\|compact`. |
 | Charters / goals / tone / soul | `CHARTER.md` per node for mission, goals, tone, principles, and notes. | Supported via `hive charter init\|show\|list\|update`. |
-| Scoped agent sign-in | Actors sign into a home/effective node and receive a generated context pack. | Supported via `hive actor assign\|signin\|refresh`; does not copy parent memory into agent folders. |
+| Scoped agent sign-in | Actors sign into a home/effective node and receive a generated context pack. | Supported via `hive actor assign\|signin\|refresh`; session mounts build on this flow. |
 | Context pack compilation | Parent hierarchy + target node + active edge context compiled into `PACK.md` and `MANIFEST.yaml`. | Supported via `hive context compile`; packs are generated artifacts. |
-| Partial hydration | Agents load only the context pack for their assigned node plus explicit edge context. | Supported at context level. Filesystem-level projection/export is not implemented yet. |
+| Partial hydration | Agents load only assigned-node context, inherited parent context, explicit edge context, and actor memory snapshots. | Supported via `hive session start`; agents do not need the full workspace. |
 | Import staging | Local files/text and URL references are captured as import items. | Supported via `hive import add\|fetch`. Remote URL fetch stores references unless a connector implements content retrieval. |
 | Import summarization | Classification and compaction create source-linked candidate memory. | Supported, deterministic by default; optional LLM profiles can assist import classify/compact. |
 | Node and edge compaction | Generated `BRIEF.md` rollups for nodes and edges. | Supported via `hive node compact`, `hive edge compact`, and job handlers. |
@@ -59,7 +59,7 @@ Agents should call `hive actor signin` and load the generated context pack. They
 | LLM profiles | Provider registry, credentials-by-env, and profile assignment. | Supported for import classify/compact and promotion sweep advisories; secrets stay outside memory files. |
 | Persistence backends | Registry lists planned Markdown/vector/relational/graph layers. | Markdown is canonical today; vector/relational databases are not active persistence engines yet. |
 | Notion / Google Drive | Connector registry recognizes and preserves references. | Authenticated fetch, watch, webhook, and polling are not implemented yet. |
-| Scoped filesystem projection | Per-agent materialized workspace containing only allowed folders. | Not implemented yet; planned as `actor scope/materialize/collect` style workflow. |
+| Scoped session mounts | Per-agent materialized session directories with generated adapter bootstrap, context bundle, scope file, and outbox. | Supported via `hive session start` and `hive session finish`; hard OS sandboxing is still left to the launcher. |
 | Hard access enforcement | CLI-level write-scope enforcement per actor. | Partial by convention/policy today; strict enforcement is future work. |
 
 ## Quick Start
@@ -71,6 +71,7 @@ cd hive-synapse
 ./bin/hive init /tmp/hive-demo --fixture basic-org
 ./bin/hive validate /tmp/hive-demo
 ./bin/hive actor signin agent:codex-engineering-001 --workspace /tmp/hive-demo --require-assignment --json
+./bin/hive session start agent:codex-engineering-001 --workspace /tmp/hive-demo --adapter codex --output /tmp/hive-codex-session --require-assignment
 ./bin/hive node compact departments/engineering --workspace /tmp/hive-demo
 ./bin/hive context compile departments/engineering --workspace /tmp/hive-demo
 ./bin/hive operation list --workspace /tmp/hive-demo
@@ -94,8 +95,8 @@ Hive Synapse is harness-neutral at the memory layer. The shared contract is:
 1. install or expose the `hive` CLI;
 2. point agents at `HIVE_WORKSPACE`;
 3. run `hive actor signin` to obtain scoped context;
-4. load the generated `PACK.md`;
-5. submit updates through imports, candidates, promotions, compaction, and jobs.
+4. load the generated `PACK.md`, or use `hive session start` to materialize a harness-ready mount;
+5. submit updates through session outboxes, imports, candidates, promotions, compaction, and jobs.
 
 Packaged adapters are included for common harnesses:
 
@@ -119,6 +120,7 @@ OpenClaw public docs describe a workspace model with bootstrap files such as `AG
 - [`docs/local-setup.md`](docs/local-setup.md): local installation and real-workspace setup guide.
 - [`docs/second-brain-setup.md`](docs/second-brain-setup.md): end-to-end personal/team second-brain setup.
 - [`docs/agent-interoperability.md`](docs/agent-interoperability.md): Codex, Claude, Hermes, OpenClaw, and generic agent setup.
+- [`docs/session-lifecycle.md`](docs/session-lifecycle.md): `hive session start` / `hive session finish` workflow.
 - [`docs/agent-skills.md`](docs/agent-skills.md): deployable skill categories and installers.
 - [`docs/setup-checklist.md`](docs/setup-checklist.md): short checklist for feature-completion readiness.
 - [`docs/command-reference.md`](docs/command-reference.md): CLI command reference.

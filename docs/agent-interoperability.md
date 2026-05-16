@@ -9,9 +9,9 @@ Every agent integration should follow this contract:
 1. Make the `hive` CLI available to the agent runtime.
 2. Set `HIVE_WORKSPACE` to the canonical Hive workspace path.
 3. Assign the actor to a home node with `hive actor assign`.
-4. Start or refresh the actor with `hive actor signin` / `hive actor refresh`.
-5. Load the returned context pack, not the full workspace.
-6. Write new source material through imports/candidates/proposals.
+4. Start or refresh the actor with `hive actor signin` / `hive actor refresh`, or use `hive session start` to create a harness-ready mount.
+5. Load the returned context pack or generated session mount, not the full workspace.
+6. Write new source material through session outboxes, imports, candidates, and proposals.
 7. Let Hive manage shared team, department, organization, and edge memory.
 
 ```bash
@@ -97,7 +97,15 @@ export HIVE_WORKSPACE="$HOME/Obsidian/HiveSecondBrain"
 ./bin/hive actor signin agent:codex-research-001 --workspace "$HIVE_WORKSPACE" --require-assignment --json
 ```
 
-Then instruct Codex to load the returned `context_pack` path before work and to use Hive commands for memory mutations.
+For the simpler Codex workflow, materialize a mount and start Codex inside it:
+
+```bash
+./bin/hive session start agent:codex-research-001 --workspace "$HIVE_WORKSPACE" --adapter codex --output "$HOME/.hive/mounts/codex-research-001" --require-assignment
+cd "$HOME/.hive/mounts/codex-research-001"
+codex
+```
+
+At shutdown, write `.hive/outbox/memory-delta.jsonl` and run `hive session finish <mount> --workspace "$HIVE_WORKSPACE"`. If using direct sign-in instead, instruct Codex to load the returned `context_pack` path before work and to use Hive commands for memory mutations.
 
 ## Claude
 
@@ -169,7 +177,7 @@ Recommended OpenClaw bootstrap files:
 `AGENTS.md`:
 
 ```text
-Use Hive Synapse as the shared memory control plane. Before work, run `hive actor signin` or `hive actor refresh`, load only the returned context pack, and do not read unrelated Hive workspace directories.
+Use Hive Synapse as the shared memory control plane. Before work, run `hive session start` or `hive actor signin`, load only the generated session/context pack, and do not read unrelated Hive workspace directories.
 ```
 
 `SOUL.md`:
@@ -184,7 +192,7 @@ Follow the persona and operating boundaries assigned by the Hive node charter an
 Use the `hive` CLI for context sync, imports, compaction, jobs, promotion, validation, and audit. Do not hand-edit generated context packs or parent organization memory.
 ```
 
-If OpenClaw is configured with a per-agent workspace, point that workspace at a projected/agent-specific directory when Hive adds filesystem projection support. Until then, give OpenClaw read access to the canonical workspace only if the agent is trusted not to inspect unrelated folders.
+If OpenClaw is configured with a per-agent workspace, point that workspace at a `hive session start --adapter openclaw` mount. Do not give OpenClaw the full canonical workspace unless you intentionally want broader access.
 
 ## Generic Harnesses
 
@@ -194,18 +202,18 @@ For OpenClaw-like, Hermes-like, or custom agents:
 2. Ensure the harness can execute `hive` commands.
 3. Set `HIVE_WORKSPACE` in the agent environment.
 4. Assign the agent with `hive actor assign`.
-5. Run `hive actor signin` at startup.
-6. Load only the returned `PACK.md` and optional `MANIFEST.yaml`.
-7. Route memory changes through `hive import`, `hive promote`, `hive node compact`, `hive edge compact`, and `hive job`.
+5. Run `hive session start` at startup, or run `hive actor signin` for direct context-pack mode.
+6. Load only the generated session mount or returned `PACK.md` and optional `MANIFEST.yaml`.
+7. Route memory changes through `hive session finish`, `hive import`, `hive promote`, `hive node compact`, `hive edge compact`, and `hive job`.
 
 ## Current Gaps
 
-- Hive does not yet generate per-agent filesystem projections that include only allowed directories.
+- Hive now generates per-agent session mounts, but hard OS-level sandboxing is still the launcher/harness responsibility.
 - Hive does not yet enforce hard actor write scopes across every command.
 - Notion and Google Drive connectors preserve references but do not yet perform authenticated fetch or change watching.
 - Vector and relational persistence are registry entries, not active backing stores.
 
-These gaps do not block local use if agents operate through sign-in context packs and Hive commands.
+These gaps do not block local use if agents operate through session mounts or sign-in context packs and Hive commands.
 
 ## References
 

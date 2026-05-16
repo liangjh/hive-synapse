@@ -228,7 +228,28 @@ Generated context appears under:
 $HIVE_WORKSPACE/memory/generated/context-packs/
 ```
 
-Agents should load the returned `context_pack` path. They should not import the full Hive workspace unless you explicitly grant that broader filesystem access. Before shared writes, check freshness:
+For a harness-ready working directory, use a session mount:
+
+```bash
+export HIVE_MOUNTS="$HOME/.hive/mounts"
+mkdir -p "$HIVE_MOUNTS"
+./bin/hive session start agent:research-001 \
+  --workspace "$HIVE_WORKSPACE" \
+  --adapter codex \
+  --output "$HIVE_MOUNTS/research-001-codex" \
+  --require-assignment
+cd "$HIVE_MOUNTS/research-001-codex"
+codex
+```
+
+At the end of the agent run, collect session memory back into Hive:
+
+```bash
+./bin/hive session finish "$HIVE_MOUNTS/research-001-codex" \
+  --workspace "$HIVE_WORKSPACE"
+```
+
+Agents should load only the returned context pack or session mount. They should not import the full Hive workspace unless you explicitly grant that broader filesystem access. Before shared writes, check freshness:
 
 ```bash
 ./bin/hive context status departments/research --workspace "$HIVE_WORKSPACE"
@@ -305,4 +326,4 @@ Before using this for important local work, confirm:
 ./bin/hive llm config --workspace "$HIVE_WORKSPACE"
 ```
 
-Also review [Implementation Backlog](implementation-backlog.md), [Implementation Test Plan](implementation-test-plan.md), and the README feature matrix for remaining gaps. In the current slice, import LLM flows, promotion advisories, actor sign-in, node/edge compaction, scheduler templates, and adapter skills are wired. Rollback apply, authenticated Notion/GDrive sync, vector/relational persistence, hard actor write-scope enforcement, and per-agent filesystem projections remain future work.
+Also review [Implementation Backlog](implementation-backlog.md), [Implementation Test Plan](implementation-test-plan.md), and the README feature matrix for remaining gaps. In the current slice, import LLM flows, promotion advisories, actor sign-in, session start/finish mounts, node/edge compaction, scheduler templates, and adapter skills are wired. Rollback apply, authenticated Notion/GDrive sync, vector/relational persistence, hard actor write-scope enforcement, and fully promotable edge-candidate session memory remain future work.
