@@ -13,6 +13,7 @@ from .llm import generate_structured, input_hash_for_path, should_use_model, wri
 from .operations import OperationLog
 from .paths import WorkspacePaths, target_to_path_fragment
 from .policies import operation_policy
+from .prompts import PROMOTION_SWEEP_PROMPT
 
 AUTHORIZED_REVIEW_PREFIXES = ("steward:", "human:admin", "system:")
 
@@ -299,25 +300,12 @@ def sweep_promotability(
                     expected_schema=PROMOTION_SCHEMA,
                     input_refs=data.get("source_refs") or [],
                     input_hashes=input_hash_for_path(paths.root, str(path.relative_to(paths.root))),
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "Judge whether candidate memory is ready to be proposed "
-                                "for promotion. Return only JSON with recommended, "
-                                "confidence, rationale, risk_flags, missing_evidence, "
-                                "and optional recommended_target_scope. Be conservative "
-                                "when evidence is missing or text appears conflicted."
-                            ),
-                        },
-                        {
-                            "role": "user",
-                            "content": (
-                                f"Candidate metadata:\n{yaml.safe_dump(data, sort_keys=False)}\n\n"
-                                f"Candidate body:\n{doc.body[:12000]}"
-                            ),
-                        },
-                    ],
+                    prompt_id=PROMOTION_SWEEP_PROMPT.id,
+                    prompt_version=PROMOTION_SWEEP_PROMPT.version,
+                    messages=PROMOTION_SWEEP_PROMPT.render_messages(
+                        candidate_metadata=yaml.safe_dump(data, sort_keys=False),
+                        candidate_body=doc.body[:12000],
+                    ),
                 )
                 output = model_response.output_json
                 advisory = {

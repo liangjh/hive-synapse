@@ -122,6 +122,7 @@ OpenClaw public docs describe a workspace model with bootstrap files such as `AG
 - [`docs/agent-interoperability.md`](docs/agent-interoperability.md): Codex, Claude, Hermes, OpenClaw, and generic agent setup.
 - [`docs/session-lifecycle.md`](docs/session-lifecycle.md): `hive session start` / `hive session finish` workflow.
 - [`docs/agent-skills.md`](docs/agent-skills.md): deployable skill categories and installers.
+- [`docs/prompt-audit.md`](docs/prompt-audit.md): centralized prompt registry and audit guide.
 - [`docs/setup-checklist.md`](docs/setup-checklist.md): short checklist for feature-completion readiness.
 - [`docs/command-reference.md`](docs/command-reference.md): CLI command reference.
 - [`docs/operation-policy.md`](docs/operation-policy.md): configurable automation defaults.

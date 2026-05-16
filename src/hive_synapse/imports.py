@@ -11,6 +11,7 @@ from .fs import atomic_write_text
 from .ids import new_id, utc_now_iso
 from .llm import generate_structured, input_hash_for_path, should_use_model, write_model_run
 from .operations import OperationLog
+from .prompts import IMPORT_CLASSIFY_PROMPT, IMPORT_COMPACT_PROMPT
 from .paths import WorkspacePaths, target_to_path_fragment
 from .repository import WorkspaceRepository, record_relative_path
 
@@ -270,25 +271,14 @@ def classify_import(
             expected_schema=CLASSIFICATION_SCHEMA,
             input_refs=_import_input_refs(item),
             input_hashes=input_hash_for_path(paths.root, item.get("local_path")),
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Classify imported memory for a workspace. Return only JSON with "
-                        "topics, temporal_status, sensitivity, and optional rationale. "
-                        "Do not invent facts beyond the supplied text."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Import id: {import_id}\n"
-                        f"Target: {item.get('target')}\n"
-                        f"Source type: {item.get('source_type')}\n\n"
-                        f"Text:\n{text[:MODEL_INPUT_LIMIT]}"
-                    ),
-                },
-            ],
+            prompt_id=IMPORT_CLASSIFY_PROMPT.id,
+            prompt_version=IMPORT_CLASSIFY_PROMPT.version,
+            messages=IMPORT_CLASSIFY_PROMPT.render_messages(
+                import_id=import_id,
+                target=item.get("target"),
+                source_type=item.get("source_type"),
+                text=text[:MODEL_INPUT_LIMIT],
+            ),
         )
         output = response.output_json
         classification = {
@@ -379,27 +369,14 @@ def compact_import(
             expected_schema=COMPACTION_SCHEMA,
             input_refs=_import_input_refs(item),
             input_hashes=input_hash_for_path(paths.root, item.get("local_path")),
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "Summarize imported source text into concise candidate memory. "
-                        "Return only JSON with summary, confidence, tags, optional sensitivity, "
-                        "and optional rationale. Preserve source-grounded facts and "
-                        "avoid invention."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Import id: {import_id}\n"
-                        f"Target node: {item.get('target')}\n"
-                        "Classification: "
-                        f"{yaml.safe_dump(item.get('classification') or {}, sort_keys=False)}\n\n"
-                        f"Text:\n{text[:MODEL_INPUT_LIMIT]}"
-                    ),
-                },
-            ],
+            prompt_id=IMPORT_COMPACT_PROMPT.id,
+            prompt_version=IMPORT_COMPACT_PROMPT.version,
+            messages=IMPORT_COMPACT_PROMPT.render_messages(
+                import_id=import_id,
+                target=item.get("target"),
+                classification=yaml.safe_dump(item.get("classification") or {}, sort_keys=False),
+                text=text[:MODEL_INPUT_LIMIT],
+            ),
         )
         model_output = model_response.output_json
         summary = " ".join(str(model_output.get("summary") or "").strip().split())

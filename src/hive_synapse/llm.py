@@ -75,6 +75,8 @@ class ModelRequest:
     expected_schema: dict[str, Any] | None = None
     input_refs: list[dict[str, Any]] = field(default_factory=list)
     input_hashes: list[dict[str, Any]] = field(default_factory=list)
+    prompt_id: str | None = None
+    prompt_version: str | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return {
@@ -86,6 +88,8 @@ class ModelRequest:
             "expected_schema": self.expected_schema or {},
             "input_refs": self.input_refs,
             "input_hashes": self.input_hashes,
+            "prompt_id": self.prompt_id,
+            "prompt_version": self.prompt_version,
         }
 
 
@@ -376,6 +380,8 @@ def generate_structured(
     input_hashes: list[dict[str, Any]] | None = None,
     profile_id: str | None = None,
     credential_id: str | None = None,
+    prompt_id: str | None = None,
+    prompt_version: str | None = None,
 ) -> tuple[ModelRequest, ModelResponse]:
     paths = WorkspacePaths(root.resolve())
     paths.require_workspace()
@@ -402,6 +408,8 @@ def generate_structured(
         expected_schema=expected_schema,
         input_refs=input_refs or [],
         input_hashes=input_hashes or [],
+        prompt_id=prompt_id,
+        prompt_version=prompt_version,
     )
     client = _provider_for(provider)
     response = client.generate(request)
@@ -437,6 +445,8 @@ def write_model_run(
         "status": status,
         "input_refs": request.input_refs,
         "input_hashes": request.input_hashes,
+        "prompt_id": request.prompt_id,
+        "prompt_version": request.prompt_version,
         "output_schema": request.expected_schema or {},
         "created_records": created_records or [],
         "created_proposals": created_proposals or [],

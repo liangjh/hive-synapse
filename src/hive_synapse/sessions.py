@@ -10,6 +10,7 @@ from .graph import MemoryGraph
 from .ids import new_id, utc_now_iso
 from .operations import OperationLog
 from .paths import WorkspacePaths
+from .prompts import SIGNIN_BOOTSTRAP_PROMPT
 
 
 def _safe_actor_fragment(actor_id: str) -> str:
@@ -68,33 +69,14 @@ def _context_entry(
 
 
 def _bootstrap_markdown(record: dict[str, Any], context_entry: dict[str, Any]) -> str:
-    return "\n".join(
-        [
-            f"# Hive Synapse Sign-In: {record['id']}",
-            "",
-            f"Actor: `{record['actor']}`",
-            f"Effective node: `{record['effective_node']}`",
-            f"Role: `{record['role']}`",
-            f"Personal memory home: `{record['personal_memory_home']}`",
-            "",
-            "## Required Startup Load",
-            "",
-            f"Load context pack: `{context_entry['pack']}`",
-            f"Read manifest: `{context_entry['manifest']}`",
-            "",
-            "## Operating Boundary",
-            "",
-            "- Treat agent-private memory as local working state.",
-            "- Treat Hive node, edge, and org memory as shared organizational context.",
-            (
-                "- Submit reusable findings through imports, candidates, and promotion "
-                "rather than directly editing parent memory."
-            ),
-            (
-                "- Refresh this sign-in before acting if context dirty markers or "
-                "upstream changes exist."
-            ),
-        ]
+    return SIGNIN_BOOTSTRAP_PROMPT.render(
+        signin_id=record["id"],
+        actor=record["actor"],
+        effective_node=record["effective_node"],
+        role=record["role"],
+        personal_memory_home=record["personal_memory_home"],
+        context_pack=context_entry["pack"],
+        manifest=context_entry["manifest"],
     )
 
 
