@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Hive Synapse Architecture Map</title>
+    <style>
+      :root {
+        --bg: #f7f7f5;
+        --ink: #1f2428;
+        --muted: #687076;
+        --line: #d9dedb;
+        --panel: #ffffff;
+        --panel-soft: #f0f4f2;
+        --accent: #0f766e;
+        --accent-2: #7c3aed;
+        --code: #19202a;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family:
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        line-height: 1.5;
+      }
+
+      a {
+        color: var(--accent);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .shell {
+        display: grid;
+        grid-template-columns: 280px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      aside {
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow: auto;
+        border-right: 1px solid var(--line);
+        background: #ffffff;
+        padding: 28px 22px;
+      }
+
+      .brand {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        margin-bottom: 28px;
+      }
+
+      .mark {
+        display: grid;
+        width: 38px;
+        height: 38px;
+        place-items: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel-soft);
+        color: var(--accent);
+        font-weight: 800;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.2;
+      }
+
+      .brand p {
+        margin: 3px 0 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      nav {
+        display: grid;
+        gap: 7px;
+      }
+
+      nav a {
+        display: block;
+        border-radius: 6px;
+        padding: 7px 9px;
+        color: #354047;
+        font-size: 13px;
+      }
+
+      nav a:hover {
+        background: var(--panel-soft);
+        text-decoration: none;
+      }
+
+      main {
+        min-width: 0;
+      }
+
+      .hero {
+        border-bottom: 1px solid var(--line);
+        background: linear-gradient(180deg, #ffffff 0%, #f7f7f5 100%);
+        padding: 52px clamp(22px, 6vw, 72px) 34px;
+      }
+
+      .hero h2 {
+        max-width: 980px;
+        margin: 0;
+        font-size: clamp(32px, 4vw, 54px);
+        line-height: 1.02;
+        letter-spacing: 0;
+      }
+
+      .hero p {
+        max-width: 900px;
+        margin: 18px 0 0;
+        color: var(--muted);
+        font-size: 17px;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 24px;
+      }
+
+      .pill {
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        background: #ffffff;
+        padding: 6px 10px;
+        color: #354047;
+        font-size: 12px;
+      }
+
+      section {
+        padding: 34px clamp(22px, 6vw, 72px);
+        border-bottom: 1px solid var(--line);
+      }
+
+      section h3 {
+        margin: 0 0 12px;
+        font-size: 24px;
+        letter-spacing: 0;
+      }
+
+      section > p {
+        max-width: 920px;
+        margin: 0 0 20px;
+        color: var(--muted);
+      }
+
+      .diagram-panel {
+        overflow: auto;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 20px;
+      }
+
+      .mermaid {
+        min-width: 780px;
+        margin: 0;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+        margin-top: 18px;
+      }
+
+      .note {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        padding: 16px;
+      }
+
+      .note h4 {
+        margin: 0 0 8px;
+        font-size: 15px;
+      }
+
+      .note p,
+      .note ul {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      .note ul {
+        padding-left: 18px;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid var(--line);
+        background: var(--panel);
+        font-size: 14px;
+      }
+
+      th,
+      td {
+        border-bottom: 1px solid var(--line);
+        padding: 10px 12px;
+        text-align: left;
+        vertical-align: top;
+      }
+
+      th {
+        background: var(--panel-soft);
+        color: #273138;
+        font-weight: 700;
+      }
+
+      code {
+        color: var(--code);
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+        font-size: 0.92em;
+      }
+
+      @media (max-width: 980px) {
+        .shell {
+          display: block;
+        }
+
+        aside {
+          position: relative;
+          height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+        }
+
+        nav {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media (max-width: 560px) {
+        nav {
+          grid-template-columns: 1fr;
+        }
+
+        .hero {
+          padding-top: 32px;
+        }
+
+        section {
+          padding-top: 28px;
+          padding-bottom: 28px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell">
+      <aside>
+        <div class="brand">
+          <div class="mark">HS</div>
+          <div>
+            <h1>Hive Synapse</h1>
+            <p>Architecture Map</p>
+          </div>
+        </div>
+        <nav aria-label="Architecture sections">
+          <a href="#overview">System Overview</a>
+          <a href="#runtime">Runtime Module Map</a>
+          <a href="#workspace">Workspace Data Model</a>
+          <a href="#signin">Actor Sign-In</a>
+          <a href="#promotion">Import To Promotion</a>
+          <a href="#session">Session Lifecycle</a>
+          <a href="#jobs">Jobs And Maintenance</a>
+          <a href="#index">Code Index</a>
+        </nav>
+      </aside>
+
+      <main>
+        <header class="hero">
+          <h2>Filesystem-first memory and context control plane for organization-based AI agents.</h2>
+          <p>
+            This rendered map connects the conceptual architecture to the codebase: CLI and MCP interfaces,
+            runtime services, workspace storage, governed shared-memory workflows, generated context packs,
+            and disposable agent session mounts.
+          </p>
+          <div class="meta">
+            <span class="pill">Generated 2026-05-16</span>
+            <span class="pill">Markdown source: docs/architecture-map.md</span>
+            <span class="pill">Mermaid sources: docs/diagrams/*.mmd</span>
+          </div>
+        </header>
+
+        <section id="overview">
+          <h3>System Overview</h3>
+          <p>The top-level runtime sits between agent/human interfaces and a canonical Markdown/YAML workspace.</p>
+          <div class="diagram-panel">
+            <pre class="mermaid">flowchart LR
+  Human["Human operator"]
+  Agent["AI agents&lt;br/&gt;Codex / Claude / generic"]
+
+  subgraph Interfaces["Interface Layer"]
+    Bin["bin/hive&lt;br/&gt;shell launcher"]
+    CLI["hive_synapse.cli&lt;br/&gt;argparse command surface"]
+    MCP["hive_synapse.mcp&lt;br/&gt;JSON-line tool surface"]
+    AdapterSkills["skills/ and adapters/&lt;br/&gt;Codex skills, Claude commands"]
+  end
+
+  subgraph Runtime["Runtime Services"]
+    Workspace["workspace.py&lt;br/&gt;init fixtures and required dirs"]
+    Lifecycle["lifecycle.py / edges.py / charters.py&lt;br/&gt;nodes, edges, assignments, charters"]
+    GraphContext["graph.py / context.py / sessions.py&lt;br/&gt;graph traversal and context packs"]
+    SessionLifecycle["session_lifecycle.py&lt;br/&gt;session mounts and outbox collection"]
+    Ingest["imports.py / connectors.py&lt;br/&gt;source capture, classify, compact"]
+    Governance["promotion.py / guardrails.py&lt;br/&gt;review, apply, validation guardrails"]
+    Jobs["jobs.py / watchdog.py / scheduler.py&lt;br/&gt;queue, remediation, templates"]
+    LLM["llm.py&lt;br/&gt;optional model adapters"]
+    Upgrade["backup.py / upgrade.py / archive.py&lt;br/&gt;backup, migration, archive sweeps"]
+    Audit["operations.py&lt;br/&gt;append-only operation records"]
+  end
+
+  subgraph WorkspaceStore["Filesystem Workspace"]
+    Config["hive.config.yaml&lt;br/&gt;workspace binding"]
+    Policies["policies/&lt;br/&gt;operation, budget, LLM"]
+    Org["org/&lt;br/&gt;assignments and sign-ins"]
+    GraphFiles["memory/graph/&lt;br/&gt;node and edge definitions"]
+    Records["memory/records/&lt;br/&gt;current, history, charters, candidates, published"]
+    Imports["memory/imports/ and memory/raw/&lt;br/&gt;staging and preserved evidence"]
+    Proposals["memory/proposals/&lt;br/&gt;promotion proposals"]
+    Queue["memory/jobs/ and memory/state/&lt;br/&gt;pending work, leases, dirty markers"]
+    Generated["memory/generated/&lt;br/&gt;context packs, session records, LLM runs"]
+    Operations["memory/operations/ and memory/audit/&lt;br/&gt;audit trail and reports"]
+  end
+
+  Human --&gt; Bin
+  Agent --&gt; Bin
+  Agent --&gt; MCP
+  AdapterSkills --&gt; Bin
+  Bin --&gt; CLI
+  CLI --&gt; Workspace
+  CLI --&gt; Lifecycle
+  CLI --&gt; GraphContext
+  CLI --&gt; SessionLifecycle
+  CLI --&gt; Ingest
+  CLI --&gt; Governance
+  CLI --&gt; Jobs
+  CLI --&gt; LLM
+  CLI --&gt; Upgrade
+  MCP --&gt; GraphContext
+  MCP --&gt; Ingest
+  MCP --&gt; Jobs
+
+  Workspace --&gt; Config
+  Workspace --&gt; Policies
+  Lifecycle --&gt; GraphFiles
+  Lifecycle --&gt; Records
+  Lifecycle --&gt; Org
+  GraphContext --&gt; GraphFiles
+  GraphContext --&gt; Records
+  GraphContext --&gt; Generated
+  SessionLifecycle --&gt; Generated
+  SessionLifecycle --&gt; Imports
+  Ingest --&gt; Imports
+  Ingest --&gt; Records
+  Ingest --&gt; LLM
+  Governance --&gt; Proposals
+  Governance --&gt; Records
+  Governance --&gt; Queue
+  Jobs --&gt; Queue
+  Jobs --&gt; GraphContext
+  Jobs --&gt; Ingest
+  Jobs --&gt; Governance
+  LLM --&gt; Generated
+  Upgrade --&gt; Operations
+  Audit --&gt; Operations</pre>
+          </div>
+        </section>
+
+        <section id="runtime">
+          <h3>Runtime Module Map</h3>
+          <p>The CLI fans out into domain modules that share a small filesystem/model foundation.</p>
+          <div class="diagram-panel">
+            <pre class="mermaid">flowchart TB
+  CLI["cli.py&lt;br/&gt;command routing"]
+  MCP["mcp.py&lt;br/&gt;tool routing"]
+  Bin["bin/hive"]
+
+  subgraph Foundation["Foundation"]
+    Models["models.py&lt;br/&gt;record contracts"]
+    Paths["paths.py&lt;br/&gt;workspace layout"]
+    FS["fs.py&lt;br/&gt;atomic writes and root checks"]
+    Frontmatter["frontmatter.py"]
+    YAML["simple_yaml.py"]
+    IDs["ids.py"]
+    Errors["errors.py"]
+    Repository["repository.py"]
+    Operations["operations.py"]
+  end
+
+  subgraph MemoryGraph["Graph and Context"]
+    Graph["graph.py"]
+    Context["context.py"]
+    Sessions["sessions.py"]
+    SessionLifecycle["session_lifecycle.py"]
+  end
+
+  subgraph MutationFlows["Mutation Flows"]
+    Workspace["workspace.py"]
+    Lifecycle["lifecycle.py"]
+    Edges["edges.py"]
+    Charters["charters.py"]
+    Imports["imports.py"]
+    Promotion["promotion.py"]
+    Compaction["compaction.py"]
+  end
+
+  subgraph OperationsLayer["Operations and Maintenance"]
+    Jobs["jobs.py"]
+    Watchdog["watchdog.py"]
+    Scheduler["scheduler.py"]
+    Policies["policies.py"]
+    Guardrails["guardrails.py"]
+    Validator["validator.py"]
+    Backup["backup.py"]
+    Upgrade["upgrade.py"]
+    Archive["archive.py"]
+    Skills["skills.py"]
+  end
+
+  subgraph Integrations["Integrations"]
+    LLM["llm.py"]
+    Connectors["connectors.py"]
+    Persistence["persistence.py"]
+  end
+
+  Bin --&gt; CLI
+  CLI --&gt; Models
+  CLI --&gt; Graph
+  CLI --&gt; Workspace
+  CLI --&gt; Jobs
+  CLI --&gt; LLM
+  MCP --&gt; Context
+  MCP --&gt; Imports
+  MCP --&gt; Jobs
+  MCP --&gt; Validator
+
+  Repository --&gt; Paths
+  Repository --&gt; FS
+  Repository --&gt; Frontmatter
+  Operations --&gt; Paths
+  Operations --&gt; Models
+  Graph --&gt; Paths
+  Graph --&gt; Models
+  Graph --&gt; Frontmatter
+  Context --&gt; Graph
+  Context --&gt; Policies
+  Sessions --&gt; Context
+  Sessions --&gt; Graph
+  SessionLifecycle --&gt; Sessions
+  SessionLifecycle --&gt; Imports
+  SessionLifecycle --&gt; Compaction
+  Lifecycle --&gt; Charters
+  Lifecycle --&gt; Context
+  Edges --&gt; Graph
+  Edges --&gt; Context
+  Imports --&gt; Repository
+  Imports --&gt; Connectors
+  Imports --&gt; LLM
+  Promotion --&gt; Context
+  Promotion --&gt; LLM
+  Compaction --&gt; Graph
+  Jobs --&gt; Context
+  Jobs --&gt; Imports
+  Jobs --&gt; Promotion
+  Jobs --&gt; Compaction
+  Watchdog --&gt; Jobs
+  Validator --&gt; Guardrails
+  Upgrade --&gt; Backup
+  Upgrade --&gt; Validator</pre>
+          </div>
+        </section>
+
+        <section id="workspace">
+          <h3>Workspace Data Model</h3>
+          <p>The workspace is the durable state boundary. Runtime upgrades should not overwrite organization-owned memory.</p>
+          <div class="diagram-panel">
+            <pre class="mermaid">flowchart TB
+  Root["Hive workspace root"]
+  Config["hive.config.yaml&lt;br/&gt;schema/runtime binding"]
+  Policies["policies/&lt;br/&gt;operations, context budget, node overrides, LLM"]
+  Org["org/&lt;br/&gt;assignments, signins, members, roles"]
+
+  MemoryRoot["memory/"]
+
+  subgraph MemoryDirs["memory/ directories"]
+    Graph["graph/&lt;br/&gt;nodes/*.md, edges/*.md"]
+    Records["records/&lt;br/&gt;nodes, edges, agents"]
+    Imports["imports/&lt;br/&gt;per-target staging"]
+    Raw["raw/&lt;br/&gt;preserved evidence"]
+    Proposals["proposals/&lt;br/&gt;promotion queue"]
+    Jobs["jobs/&lt;br/&gt;pending, claimed, completed, failed"]
+    State["state/&lt;br/&gt;context-dirty, leases"]
+    Generated["generated/&lt;br/&gt;context-packs, session-mounts, llm-runs"]
+    Operations["operations/&lt;br/&gt;operation records"]
+    Audit["audit/&lt;br/&gt;watchdog, archive, reports"]
+    Backups["backups/ and migrations/"]
+    Skills["skills/&lt;br/&gt;shared skill registry"]
+  end
+
+  Root --&gt; Config
+  Root --&gt; Policies
+  Root --&gt; Org
+  Root --&gt; MemoryRoot
+  MemoryRoot --&gt; Graph
+  MemoryRoot --&gt; Records
+  MemoryRoot --&gt; Imports
+  MemoryRoot --&gt; Jobs
+  MemoryRoot --&gt; Generated
+  MemoryRoot --&gt; Operations
+  Graph --&gt; Records
+  Imports --&gt; Raw
+  Imports --&gt; Records
+  Records --&gt; Proposals
+  Proposals --&gt; Records
+  Graph --&gt; Generated
+  Records --&gt; Generated
+  Policies --&gt; Generated
+  State --&gt; Generated
+  Jobs --&gt; Generated
+  Operations --&gt; Audit
+  Backups --&gt; Audit
+  Skills --&gt; Generated
+
+  Records --&gt; Current["CURRENT.md&lt;br/&gt;startup memory"]
+  Records --&gt; Charter["CHARTER.md&lt;br/&gt;mission, goals, tone"]
+  Records --&gt; Brief["BRIEF.md&lt;br/&gt;generated rollup"]
+  Records --&gt; Candidate["candidates/*.md"]
+  Records --&gt; Published["published/*.md"]</pre>
+          </div>
+        </section>
+
+        <section id="signin">
+          <h3>Actor Sign-In And Context Compilation</h3>
+          <p>Sign-in resolves assignment, compiles scoped inherited context, records provenance, and returns bootstrap paths.</p>
+          <div class="diagram-panel">
+            <pre class="mermaid">sequenceDiagram
+  autonumber
+  participant A as Agent or human
+  participant C as hive actor signin
+  participant S as sessions.sign_in_actor
+  participant G as MemoryGraph
+  participant CP as compile_context_pack
+  participant W as Filesystem workspace
+  participant O as OperationLog
+
+  A-&gt;&gt;C: hive actor signin actor-id --workspace W
+  C-&gt;&gt;S: sign_in_actor(W, actor-id)
+  S-&gt;&gt;W: read assignment YAML files
+  S-&gt;&gt;G: load nodes and edges
+  G--&gt;&gt;S: parent chain and connected edges
+  S-&gt;&gt;CP: compile_context_pack(W, effective node)
+  CP-&gt;&gt;W: read parent charters, briefs, current memory
+  CP-&gt;&gt;W: read target charter, brief, current memory
+  CP-&gt;&gt;W: read connected edge brief and current memory
+  CP-&gt;&gt;W: scan context dirty markers
+  CP-&gt;&gt;W: write PACK.md and MANIFEST.yaml
+  CP-&gt;&gt;O: append context_compile operation
+  S-&gt;&gt;W: write sign-in YAML file
+  S-&gt;&gt;O: append actor_signin operation
+  S--&gt;&gt;A: context pack path, manifest path, bootstrap</pre>
+          </div>
+        </section>
+
+        <section id="promotion">
+          <h3>Import To Promotion Flow</h3>
+          <p>Source material becomes shared memory only after evidence preservation, candidate generation, proposal review, and apply.</p>
+          <div class="diagram-panel">
+            <pre class="mermaid">sequenceDiagram
+  autonumber
+  participant User as Human or agent
+  participant CLI as hive import/promote
+  participant Importer as imports.py
+  participant LLM as llm.py optional
+  participant Promotion as promotion.py
+  participant Context as context.invalidate_context
+  participant Workspace as Filesystem workspace
+  participant Ops as OperationLog
+
+  User-&gt;&gt;CLI: hive import add target source
+  CLI-&gt;&gt;Importer: add_import()
+  Importer-&gt;&gt;Workspace: preserve source under memory/raw/imports
+  Importer-&gt;&gt;Workspace: write memory/imports/.../items/import_*.yaml
+  Importer-&gt;&gt;Ops: append import_add
+  User-&gt;&gt;CLI: hive import classify import-id
+  CLI-&gt;&gt;Importer: classify_import()
+  Importer-&gt;&gt;LLM: generate_structured() if policy enables model
+  Importer-&gt;&gt;Workspace: update import item classification
+  Importer-&gt;&gt;Ops: append import_classify
+  User-&gt;&gt;CLI: hive import compact import-id
+  CLI-&gt;&gt;Importer: compact_import()
+  Importer-&gt;&gt;LLM: summarize if policy enables model
+  Importer-&gt;&gt;Workspace: write memory/records/nodes/target/candidates/mem_*.md
+  Importer-&gt;&gt;Ops: append import_compact
+  User-&gt;&gt;CLI: hive import propose import-id
+  Importer-&gt;&gt;Workspace: write memory/proposals/proposal_*.yaml
+  Importer-&gt;&gt;Ops: append import_propose
+  User-&gt;&gt;CLI: hive promote review/apply proposal-id
+  CLI-&gt;&gt;Promotion: review_proposal(), apply_proposal()
+  Promotion-&gt;&gt;Workspace: require source_refs and authorized reviewer
+  Promotion-&gt;&gt;Workspace: write published record and append CURRENT.md
+  Promotion-&gt;&gt;Context: invalidate target context according to policy
+  Promotion-&gt;&gt;Ops: append promotion_review and promotion_apply</pre>
+          </div>
+        </section>
+
+        <section id="session">
+          <h3>Session Lifecycle Flow</h3>
+          <p>Session mounts are generated, disposable working views. Durable memory returns through the outbox.</p>
+          <div class="diagram-panel">
+            <pre class="mermaid">sequenceDiagram
+  autonumber
+  participant Agent as Agent runtime
+  participant CLI as hive session
+  participant Session as session_lifecycle.py
+  participant SignIn as sessions.sign_in_actor
+  participant Imports as imports.py
+  participant Compaction as compaction.py
+  participant Workspace as Canonical workspace
+  participant Mount as Session mount
+  participant Ops as OperationLog
+
+  Agent-&gt;&gt;CLI: hive session start actor-id --adapter codex --output mount
+  CLI-&gt;&gt;Session: start_session()
+  Session-&gt;&gt;SignIn: sign_in_actor()
+  SignIn-&gt;&gt;Workspace: compile context and write sign-in
+  Session-&gt;&gt;Workspace: read PACK.md, MANIFEST.yaml, actor MEMORY.md
+  Session-&gt;&gt;Mount: write AGENTS.md and .hive/context/*
+  Session-&gt;&gt;Mount: write .hive/outbox/README.md
+  Session-&gt;&gt;Workspace: write generated session-mount record
+  Session-&gt;&gt;Ops: append session_start
+  Agent-&gt;&gt;Mount: read generated context and do work
+  Agent-&gt;&gt;Mount: write .hive/outbox/memory-delta.jsonl
+  Agent-&gt;&gt;CLI: hive session finish mount
+  CLI-&gt;&gt;Session: finish_session()
+  Session-&gt;&gt;Mount: read manifest and memory deltas
+  Session-&gt;&gt;Workspace: archive outbox and write SESSION.md
+  Session-&gt;&gt;Workspace: append private deltas to actor MEMORY.md
+  Session-&gt;&gt;Imports: route shared deltas through add/classify/compact/propose
+  Session-&gt;&gt;Compaction: optional compact target
+  Session-&gt;&gt;Ops: append session_finish
+  Session--&gt;&gt;Agent: private counts, imports, proposals, operation id</pre>
+          </div>
+        </section>
+
+        <section id="jobs">
+          <h3>Jobs And Maintenance Flow</h3>
+          <p>Maintenance is explicit: scheduler templates call watchdog and job-runner commands over the filesystem queue.</p>
+          <div class="diagram-panel">
+            <pre class="mermaid">flowchart LR
+  Scheduler["External scheduler&lt;br/&gt;cron or launchd template"]
+  Watchdog["watchdog.py&lt;br/&gt;detect stale context, conflicts, unprocessed imports"]
+  Enqueue["jobs.enqueue_job&lt;br/&gt;write pending job YAML"]
+  Claim["jobs.claim_job&lt;br/&gt;lease and move pending to claimed"]
+  Runner["jobs.run_next_job"]
+  Complete["jobs.complete_job / fail_job"]
+
+  subgraph Handlers["Implemented Job Handlers"]
+    ImportCompact["import_compact"]
+    ContextRebuild["context_rebuild"]
+    PromotionSweep["promotion_sweep"]
+    NodeCompact["node_compact"]
+    EdgeCompact["edge_compact"]
+  end
+
+  subgraph WorkspaceState["Workspace State"]
+    Pending["memory/jobs/pending"]
+    Claimed["memory/jobs/claimed"]
+    Completed["memory/jobs/completed"]
+    Failed["memory/jobs/failed"]
+    Leases["memory/state/leases"]
+    Dirty["memory/state/context-dirty"]
+    Audit["memory/audit and memory/operations"]
+  end
+
+  Scheduler --&gt; Watchdog
+  Watchdog --&gt; Dirty
+  Watchdog --&gt; Enqueue
+  Enqueue --&gt; Pending
+  Scheduler --&gt; Runner
+  Runner --&gt; Claim
+  Claim --&gt; Pending
+  Claim --&gt; Claimed
+  Claim --&gt; Leases
+  Runner --&gt; ImportCompact
+  Runner --&gt; ContextRebuild
+  Runner --&gt; PromotionSweep
+  Runner --&gt; NodeCompact
+  Runner --&gt; EdgeCompact
+  ImportCompact --&gt; Complete
+  ContextRebuild --&gt; Complete
+  PromotionSweep --&gt; Complete
+  NodeCompact --&gt; Complete
+  EdgeCompact --&gt; Complete
+  Complete --&gt; Completed
+  Complete --&gt; Failed
+  Complete --&gt; Audit</pre>
+          </div>
+        </section>
+
+        <section id="index">
+          <h3>Code Index</h3>
+          <p>Conceptual boxes in the diagrams map to these source files.</p>
+          <table>
+            <thead>
+              <tr>
+                <th>Concept</th>
+                <th>Implementation files</th>
+                <th>Role</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>CLI command surface</td>
+                <td><code>bin/hive</code>, <code>src/hive_synapse/cli.py</code></td>
+                <td>Command groups, argument parsing, and dispatch.</td>
+              </tr>
+              <tr>
+                <td>Workspace layout</td>
+                <td><code>paths.py</code>, <code>workspace.py</code>, <code>templates/</code></td>
+                <td>Required directories, workspace initialization, fixture generation.</td>
+              </tr>
+              <tr>
+                <td>Graph and context</td>
+                <td><code>graph.py</code>, <code>context.py</code>, <code>sessions.py</code></td>
+                <td>Node/edge traversal, context pack compilation, sign-in records.</td>
+              </tr>
+              <tr>
+                <td>Shared memory pipeline</td>
+                <td><code>imports.py</code>, <code>promotion.py</code>, <code>guardrails.py</code></td>
+                <td>Evidence, candidates, proposals, review, publish, validation rules.</td>
+              </tr>
+              <tr>
+                <td>Agent sessions</td>
+                <td><code>session_lifecycle.py</code></td>
+                <td>Materialized mounts, context snapshots, outbox collection.</td>
+              </tr>
+              <tr>
+                <td>Maintenance</td>
+                <td><code>jobs.py</code>, <code>watchdog.py</code>, <code>scheduler.py</code></td>
+                <td>Filesystem queue, leases, watchdog findings, scheduler templates.</td>
+              </tr>
+              <tr>
+                <td>Audit and upgrade</td>
+                <td><code>operations.py</code>, <code>backup.py</code>, <code>upgrade.py</code></td>
+                <td>Operation records, backup, migration, rollback preview.</td>
+              </tr>
+              <tr>
+                <td>Adapters and skills</td>
+                <td><code>skills/hive/</code>, <code>adapters/codex/</code>, <code>adapters/claude/</code></td>
+                <td>Harness-native packaging around the same Hive CLI semantics.</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="grid">
+            <div class="note">
+              <h4>Architecture Invariant</h4>
+              <p>Generated artifacts are rebuildable; canonical organizational memory stays in Markdown/YAML records, graph files, raw evidence, policies, operations, and assignments.</p>
+            </div>
+            <div class="note">
+              <h4>Governance Invariant</h4>
+              <p>Agents submit reusable shared knowledge as candidates and proposals. Authorized stewards apply published memory.</p>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="assets/mermaid.min.js"></script>
+    <script>
+      mermaid.initialize({
+        startOnLoad: true,
+        securityLevel: "loose",
+        theme: "base",
+        themeVariables: {
+          primaryColor: "#ffffff",
+          primaryTextColor: "#1f2428",
+          primaryBorderColor: "#7f8b85",
+          lineColor: "#52615b",
+          secondaryColor: "#eef5f2",
+          tertiaryColor: "#f7f7f5",
+          actorBkg: "#eef5f2",
+          actorBorder: "#0f766e",
+          actorTextColor: "#1f2428",
+          signalColor: "#52615b",
+          signalTextColor: "#1f2428"
+        }
+      });
+    </script>
+  </body>
+</html>

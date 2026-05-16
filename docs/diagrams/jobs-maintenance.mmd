@@ -1,0 +1,48 @@
+flowchart LR
+  Scheduler["External scheduler<br/>cron or launchd template"]
+  Watchdog["watchdog.py<br/>detect stale context, conflicts, unprocessed imports"]
+  Enqueue["jobs.enqueue_job<br/>write pending job YAML"]
+  Claim["jobs.claim_job<br/>lease and move pending to claimed"]
+  Runner["jobs.run_next_job"]
+  Complete["jobs.complete_job / fail_job"]
+
+  subgraph Handlers["Implemented Job Handlers"]
+    ImportCompact["import_compact"]
+    ContextRebuild["context_rebuild"]
+    PromotionSweep["promotion_sweep"]
+    NodeCompact["node_compact"]
+    EdgeCompact["edge_compact"]
+  end
+
+  subgraph WorkspaceState["Workspace State"]
+    Pending["memory/jobs/pending"]
+    Claimed["memory/jobs/claimed"]
+    Completed["memory/jobs/completed"]
+    Failed["memory/jobs/failed"]
+    Leases["memory/state/leases"]
+    Dirty["memory/state/context-dirty"]
+    Audit["memory/audit and memory/operations"]
+  end
+
+  Scheduler --> Watchdog
+  Watchdog --> Dirty
+  Watchdog --> Enqueue
+  Enqueue --> Pending
+  Scheduler --> Runner
+  Runner --> Claim
+  Claim --> Pending
+  Claim --> Claimed
+  Claim --> Leases
+  Runner --> ImportCompact
+  Runner --> ContextRebuild
+  Runner --> PromotionSweep
+  Runner --> NodeCompact
+  Runner --> EdgeCompact
+  ImportCompact --> Complete
+  ContextRebuild --> Complete
+  PromotionSweep --> Complete
+  NodeCompact --> Complete
+  EdgeCompact --> Complete
+  Complete --> Completed
+  Complete --> Failed
+  Complete --> Audit

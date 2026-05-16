@@ -1,0 +1,97 @@
+flowchart TB
+  CLI["cli.py<br/>command routing"]
+  MCP["mcp.py<br/>tool routing"]
+  Bin["bin/hive"]
+
+  subgraph Foundation["Foundation"]
+    Models["models.py<br/>record contracts"]
+    Paths["paths.py<br/>workspace layout"]
+    FS["fs.py<br/>atomic writes and root checks"]
+    Frontmatter["frontmatter.py"]
+    YAML["simple_yaml.py"]
+    IDs["ids.py"]
+    Errors["errors.py"]
+    Repository["repository.py"]
+    Operations["operations.py"]
+  end
+
+  subgraph MemoryGraph["Graph and Context"]
+    Graph["graph.py"]
+    Context["context.py"]
+    Sessions["sessions.py"]
+    SessionLifecycle["session_lifecycle.py"]
+  end
+
+  subgraph MutationFlows["Mutation Flows"]
+    Workspace["workspace.py"]
+    Lifecycle["lifecycle.py"]
+    Edges["edges.py"]
+    Charters["charters.py"]
+    Imports["imports.py"]
+    Promotion["promotion.py"]
+    Compaction["compaction.py"]
+  end
+
+  subgraph OperationsLayer["Operations and Maintenance"]
+    Jobs["jobs.py"]
+    Watchdog["watchdog.py"]
+    Scheduler["scheduler.py"]
+    Policies["policies.py"]
+    Guardrails["guardrails.py"]
+    Validator["validator.py"]
+    Backup["backup.py"]
+    Upgrade["upgrade.py"]
+    Archive["archive.py"]
+    Skills["skills.py"]
+  end
+
+  subgraph Integrations["Integrations"]
+    LLM["llm.py"]
+    Connectors["connectors.py"]
+    Persistence["persistence.py"]
+  end
+
+  Bin --> CLI
+  CLI --> Models
+  CLI --> Graph
+  CLI --> Workspace
+  CLI --> Jobs
+  CLI --> LLM
+  MCP --> Context
+  MCP --> Imports
+  MCP --> Jobs
+  MCP --> Validator
+
+  Repository --> Paths
+  Repository --> FS
+  Repository --> Frontmatter
+  Operations --> Paths
+  Operations --> Models
+  Graph --> Paths
+  Graph --> Models
+  Graph --> Frontmatter
+  Context --> Graph
+  Context --> Policies
+  Sessions --> Context
+  Sessions --> Graph
+  SessionLifecycle --> Sessions
+  SessionLifecycle --> Imports
+  SessionLifecycle --> Compaction
+  Lifecycle --> Charters
+  Lifecycle --> Context
+  Edges --> Graph
+  Edges --> Context
+  Imports --> Repository
+  Imports --> Connectors
+  Imports --> LLM
+  Promotion --> Context
+  Promotion --> LLM
+  Compaction --> Graph
+  Jobs --> Context
+  Jobs --> Imports
+  Jobs --> Promotion
+  Jobs --> Compaction
+  Watchdog --> Jobs
+  Validator --> Guardrails
+  Upgrade --> Backup
+  Upgrade --> Validator

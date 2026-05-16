@@ -1,0 +1,36 @@
+sequenceDiagram
+  autonumber
+  participant User as Human or agent
+  participant CLI as hive import/promote
+  participant Importer as imports.py
+  participant LLM as llm.py optional
+  participant Promotion as promotion.py
+  participant Context as context.invalidate_context
+  participant Workspace as Filesystem workspace
+  participant Ops as OperationLog
+
+  User->>CLI: hive import add target source
+  CLI->>Importer: add_import()
+  Importer->>Workspace: preserve source under memory/raw/imports
+  Importer->>Workspace: write memory/imports/.../items/import_*.yaml
+  Importer->>Ops: append import_add
+  User->>CLI: hive import classify import-id
+  CLI->>Importer: classify_import()
+  Importer->>LLM: generate_structured() if policy enables model
+  Importer->>Workspace: update import item classification
+  Importer->>Ops: append import_classify
+  User->>CLI: hive import compact import-id
+  CLI->>Importer: compact_import()
+  Importer->>LLM: summarize if policy enables model
+  Importer->>Workspace: write memory/records/nodes/target/candidates/mem_*.md
+  Importer->>Ops: append import_compact
+  User->>CLI: hive import propose import-id
+  Importer->>Workspace: write memory/proposals/proposal_*.yaml
+  Importer->>Ops: append import_propose
+  User->>CLI: hive promote review/apply proposal-id
+  CLI->>Promotion: review_proposal(), apply_proposal()
+  Promotion->>Workspace: require source_refs and authorized reviewer
+  Promotion->>Workspace: write published record and append CURRENT.md
+  Promotion->>Context: invalidate target context according to policy
+  Promotion->>Ops: append promotion_review and promotion_apply
+

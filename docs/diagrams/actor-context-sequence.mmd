@@ -1,0 +1,25 @@
+sequenceDiagram
+  autonumber
+  participant A as Agent or human
+  participant C as hive actor signin
+  participant S as sessions.sign_in_actor
+  participant G as MemoryGraph
+  participant CP as compile_context_pack
+  participant W as Filesystem workspace
+  participant O as OperationLog
+
+  A->>C: hive actor signin actor-id --workspace W
+  C->>S: sign_in_actor(W, actor-id)
+  S->>W: read assignment YAML files
+  S->>G: load nodes and edges
+  G-->>S: parent chain and connected edges
+  S->>CP: compile_context_pack(W, effective node)
+  CP->>W: read parent charters, briefs, current memory
+  CP->>W: read target charter, brief, current memory
+  CP->>W: read connected edge brief and current memory
+  CP->>W: scan context dirty markers
+  CP->>W: write PACK.md and MANIFEST.yaml
+  CP->>O: append context_compile operation
+  S->>W: write sign-in YAML file
+  S->>O: append actor_signin operation
+  S-->>A: context pack path, manifest path, bootstrap

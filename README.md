@@ -117,6 +117,7 @@ OpenClaw public docs describe a workspace model with bootstrap files such as `AG
 
 ## Design and Build Plans
 
+- [`docs/architecture-map.md`](docs/architecture-map.md): visual architecture map with Mermaid diagrams and codebase file mappings.
 - [`docs/local-setup.md`](docs/local-setup.md): local installation and real-workspace setup guide.
 - [`docs/second-brain-setup.md`](docs/second-brain-setup.md): end-to-end personal/team second-brain setup.
 - [`docs/agent-interoperability.md`](docs/agent-interoperability.md): Codex, Claude, Hermes, OpenClaw, and generic agent setup.

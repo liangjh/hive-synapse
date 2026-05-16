@@ -1,0 +1,52 @@
+flowchart TB
+  Root["Hive workspace root"]
+  Config["hive.config.yaml<br/>schema/runtime binding"]
+  Policies["policies/<br/>operations, context budget, node overrides, LLM"]
+  Org["org/<br/>assignments, signins, members, roles"]
+
+  MemoryRoot["memory/"]
+
+  subgraph MemoryDirs["memory/ directories"]
+    Graph["graph/<br/>nodes/*.md, edges/*.md"]
+    Records["records/<br/>nodes, edges, agents"]
+    Imports["imports/<br/>per-target staging"]
+    Raw["raw/<br/>preserved evidence"]
+    Proposals["proposals/<br/>promotion queue"]
+    Jobs["jobs/<br/>pending, claimed, completed, failed"]
+    State["state/<br/>context-dirty, leases"]
+    Generated["generated/<br/>context-packs, session-mounts, llm-runs"]
+    Operations["operations/<br/>operation records"]
+    Audit["audit/<br/>watchdog, archive, reports"]
+    Backups["backups/ and migrations/"]
+    Skills["skills/<br/>shared skill registry"]
+  end
+
+  Root --> Config
+  Root --> Policies
+  Root --> Org
+  Root --> MemoryRoot
+  MemoryRoot --> Graph
+  MemoryRoot --> Records
+  MemoryRoot --> Imports
+  MemoryRoot --> Jobs
+  MemoryRoot --> Generated
+  MemoryRoot --> Operations
+  Graph --> Records
+  Imports --> Raw
+  Imports --> Records
+  Records --> Proposals
+  Proposals --> Records
+  Graph --> Generated
+  Records --> Generated
+  Policies --> Generated
+  State --> Generated
+  Jobs --> Generated
+  Operations --> Audit
+  Backups --> Audit
+  Skills --> Generated
+
+  Records --> Current["CURRENT.md<br/>startup memory"]
+  Records --> Charter["CHARTER.md<br/>mission, goals, tone"]
+  Records --> Brief["BRIEF.md<br/>generated rollup"]
+  Records --> Candidate["candidates/*.md"]
+  Records --> Published["published/*.md"]

@@ -1,0 +1,79 @@
+flowchart LR
+  Human["Human operator"]
+  Agent["AI agents<br/>Codex / Claude / generic"]
+
+  subgraph Interfaces["Interface Layer"]
+    Bin["bin/hive<br/>shell launcher"]
+    CLI["hive_synapse.cli<br/>argparse command surface"]
+    MCP["hive_synapse.mcp<br/>JSON-line tool surface"]
+    AdapterSkills["skills/ and adapters/<br/>Codex skills, Claude commands"]
+  end
+
+  subgraph Runtime["Runtime Services"]
+    Workspace["workspace.py<br/>init fixtures and required dirs"]
+    Lifecycle["lifecycle.py / edges.py / charters.py<br/>nodes, edges, assignments, charters"]
+    GraphContext["graph.py / context.py / sessions.py<br/>graph traversal and context packs"]
+    SessionLifecycle["session_lifecycle.py<br/>session mounts and outbox collection"]
+    Ingest["imports.py / connectors.py<br/>source capture, classify, compact"]
+    Governance["promotion.py / guardrails.py<br/>review, apply, validation guardrails"]
+    Jobs["jobs.py / watchdog.py / scheduler.py<br/>queue, remediation, templates"]
+    LLM["llm.py<br/>optional model adapters"]
+    Upgrade["backup.py / upgrade.py / archive.py<br/>backup, migration, archive sweeps"]
+    Audit["operations.py<br/>append-only operation records"]
+  end
+
+  subgraph WorkspaceStore["Filesystem Workspace"]
+    Config["hive.config.yaml<br/>workspace binding"]
+    Policies["policies/<br/>operation, budget, LLM"]
+    Org["org/<br/>assignments and sign-ins"]
+    GraphFiles["memory/graph/<br/>node and edge definitions"]
+    Records["memory/records/<br/>current, history, charters, candidates, published"]
+    Imports["memory/imports/ and memory/raw/<br/>staging and preserved evidence"]
+    Proposals["memory/proposals/<br/>promotion proposals"]
+    Queue["memory/jobs/ and memory/state/<br/>pending work, leases, dirty markers"]
+    Generated["memory/generated/<br/>context packs, session records, LLM runs"]
+    Operations["memory/operations/ and memory/audit/<br/>audit trail and reports"]
+  end
+
+  Human --> Bin
+  Agent --> Bin
+  Agent --> MCP
+  AdapterSkills --> Bin
+  Bin --> CLI
+  CLI --> Workspace
+  CLI --> Lifecycle
+  CLI --> GraphContext
+  CLI --> SessionLifecycle
+  CLI --> Ingest
+  CLI --> Governance
+  CLI --> Jobs
+  CLI --> LLM
+  CLI --> Upgrade
+  MCP --> GraphContext
+  MCP --> Ingest
+  MCP --> Jobs
+
+  Workspace --> Config
+  Workspace --> Policies
+  Lifecycle --> GraphFiles
+  Lifecycle --> Records
+  Lifecycle --> Org
+  GraphContext --> GraphFiles
+  GraphContext --> Records
+  GraphContext --> Generated
+  SessionLifecycle --> Generated
+  SessionLifecycle --> Imports
+  Ingest --> Imports
+  Ingest --> Records
+  Ingest --> LLM
+  Governance --> Proposals
+  Governance --> Records
+  Governance --> Queue
+  Jobs --> Queue
+  Jobs --> GraphContext
+  Jobs --> Ingest
+  Jobs --> Governance
+  LLM --> Generated
+  Upgrade --> Operations
+  Audit --> Operations
+

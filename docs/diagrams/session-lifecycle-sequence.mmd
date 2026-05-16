@@ -1,0 +1,33 @@
+sequenceDiagram
+  autonumber
+  participant Agent as Agent runtime
+  participant CLI as hive session
+  participant Session as session_lifecycle.py
+  participant SignIn as sessions.sign_in_actor
+  participant Imports as imports.py
+  participant Compaction as compaction.py
+  participant Workspace as Canonical workspace
+  participant Mount as Session mount
+  participant Ops as OperationLog
+
+  Agent->>CLI: hive session start actor-id --adapter codex --output mount
+  CLI->>Session: start_session()
+  Session->>SignIn: sign_in_actor()
+  SignIn->>Workspace: compile context and write sign-in
+  Session->>Workspace: read PACK.md, MANIFEST.yaml, actor MEMORY.md
+  Session->>Mount: write AGENTS.md and .hive/context/*
+  Session->>Mount: write .hive/outbox/README.md
+  Session->>Workspace: write generated session-mount record
+  Session->>Ops: append session_start
+  Agent->>Mount: read generated context and do work
+  Agent->>Mount: write .hive/outbox/memory-delta.jsonl
+  Agent->>CLI: hive session finish mount
+  CLI->>Session: finish_session()
+  Session->>Mount: read manifest and memory deltas
+  Session->>Workspace: archive outbox and write SESSION.md
+  Session->>Workspace: append private deltas to actor MEMORY.md
+  Session->>Imports: route shared deltas through add/classify/compact/propose
+  Session->>Compaction: optional compact target
+  Session->>Ops: append session_finish
+  Session-->>Agent: private counts, imports, proposals, operation id
+
